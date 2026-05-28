@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Prix Téléphones" />
+  <title>📱 Calculateur de Prix</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, #0f0c29, #1a1a4e, #24243e);
+      font-family: 'Segoe UI', sans-serif;
+      color: #fff;
+      padding: 20px 14px 40px;
+    }
+
+    /* HEADER */
+    .badge {
+      display: inline-block;
+      background: linear-gradient(90deg, #f7971e, #ffd200);
+      border-radius: 10px;
+      padding: 5px 16px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 3px;
+      color: #1a1a4e;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    h1 {
+      font-size: 26px;
+      font-weight: 800;
+      background: linear-gradient(90deg, #f7971e, #ffd200);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 4px;
+    }
+    .subtitle { color: #aaa; font-size: 12px; margin-bottom: 24px; }
+    .header { text-align: center; margin-bottom: 8px; }
+
+    /* MARGIN CARD */
+    .margin-card {
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(247,151,30,0.3);
+      border-radius: 16px;
+      padding: 18px;
+      margin-bottom: 20px;
+    }
+    .margin-label { font-size: 13px; color: #ffd200; font-weight: 700; margin-bottom: 2px; }
+    .margin-hint { font-size: 11px; color: #aaa; margin-bottom: 14px; }
+    .margin-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    input[type=range] {
+      flex: 1;
+      accent-color: #f7971e;
+      height: 6px;
+    }
+    .margin-value {
+      background: linear-gradient(90deg, #f7971e, #ffd200);
+      color: #1a1a4e;
+      font-weight: 800;
+      font-size: 20px;
+      border-radius: 10px;
+      padding: 6px 14px;
+      min-width: 60px;
+      text-align: center;
+    }
+    .presets { display: flex; gap: 8px; flex-wrap: wrap; }
+    .preset-btn {
+      border-radius: 8px;
+      padding: 5px 11px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      border: 1px solid;
+      transition: all 0.2s;
+    }
+
+    /* TABLE */
+    .table-wrap {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px;
+      overflow: hidden;
+      margin-bottom: 16px;
+    }
+    .table-header {
+      display: grid;
+      grid-template-columns: 1fr 120px 120px 100px 36px;
+      gap: 6px;
+      padding: 10px 12px;
+      background: rgba(247,151,30,0.15);
+      border-bottom: 1px solid rgba(247,151,30,0.2);
+      font-size: 10px;
+      font-weight: 700;
+      color: #ffd200;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .table-row {
+      display: grid;
+      grid-template-columns: 1fr 120px 120px 100px 36px;
+      gap: 6px;
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      align-items: center;
+    }
+    .table-row:last-child { border-bottom: none; }
+
+    input[type=text], input[type=number] {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 8px;
+      padding: 7px 8px;
+      color: #fff;
+      font-size: 12px;
+      width: 100%;
+    }
+    input[type=text]:focus, input[type=number]:focus {
+      outline: none;
+      border-color: rgba(247,151,30,0.5);
+    }
+    input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+    .cell-sell {
+      border-radius: 8px;
+      padding: 7px 8px;
+      font-size: 12px;
+      font-weight: 700;
+      text-align: right;
+    }
+    .cell-sell.active {
+      background: rgba(247,151,30,0.15);
+      border: 1px solid rgba(247,151,30,0.4);
+      color: #ffd200;
+    }
+    .cell-sell.empty {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: #555;
+    }
+
+    .cell-profit {
+      border-radius: 8px;
+      padding: 7px 6px;
+      font-size: 11px;
+      font-weight: 700;
+      text-align: right;
+    }
+    .cell-profit.active {
+      background: rgba(74,222,128,0.12);
+      border: 1px solid rgba(74,222,128,0.3);
+      color: #4ade80;
+    }
+    .cell-profit.empty {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: #555;
+    }
+
+    .del-btn {
+      background: rgba(248,113,113,0.15);
+      border: 1px solid rgba(248,113,113,0.3);
+      border-radius: 8px;
+      color: #f87171;
+      cursor: pointer;
+      font-size: 18px;
+      width: 34px;
+      height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ADD BUTTON */
+    .add-btn {
+      width: 100%;
+      padding: 13px;
+      background: rgba(247,151,30,0.1);
+      border: 2px dashed rgba(247,151,30,0.4);
+      border-radius: 12px;
+      color: #f7971e;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-bottom: 20px;
+      transition: background 0.2s;
+    }
+    .add-btn:hover { background: rgba(247,151,30,0.2); }
+
+    /* SUMMARY */
+    .summary {
+      background: linear-gradient(135deg, rgba(74,222,128,0.1), rgba(247,151,30,0.1));
+      border: 1px solid rgba(74,222,128,0.3);
+      border-radius: 16px;
+      padding: 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .summary-total-label { font-size: 12px; color: #aaa; margin-bottom: 4px; }
+    .summary-total-value { font-size: 26px; font-weight: 800; color: #4ade80; }
+    .summary-margin-box {
+      background: rgba(74,222,128,0.15);
+      border: 1px solid rgba(74,222,128,0.3);
+      border-radius: 12px;
+      padding: 10px 16px;
+      text-align: center;
+    }
+    .summary-margin-label { font-size: 11px; color: #aaa; }
+    .summary-margin-value { font-size: 22px; font-weight: 800; color: #ffd200; }
+
+    /* FOOTER */
+    .footer {
+      padding: 12px;
+      background: rgba(255,255,255,0.04);
+      border-radius: 10px;
+      font-size: 12px;
+      color: #888;
+      text-align: center;
+    }
+    .footer strong { color: #ffd200; }
+
+    /* DOWNLOAD BTN */
+    .dl-note {
+      text-align: center;
+      font-size: 11px;
+      color: #666;
+      margin-top: 14px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="badge">Mon Business Téléphones</div>
+    <h1>Calculateur de Prix 📱</h1>
+    <p class="subtitle">Fixe ton prix de vente automatiquement</p>
+  </div>
+
+  <!-- MARGIN CARD -->
+  <div class="margin-card">
+    <div class="margin-label">📊 Ton pourcentage de marge</div>
+    <div class="margin-hint">Recommandé : 10% à 15%</div>
+    <div class="margin-row">
+      <input type="range" min="5" max="30" value="12" id="marginSlider" oninput="updateMargin(this.value)" />
+      <div class="margin-value" id="marginDisplay">12%</div>
+    </div>
+    <div class="presets">
+      <button class="preset-btn" style="color:#4ade80;border-color:#4ade80" onclick="setMargin(10)">10% — Vente rapide</button>
+      <button class="preset-btn" style="color:#ffd200;border-color:#ffd200;background:rgba(255,210,0,0.15)" onclick="setMargin(12)">12% — Équilibre ⭐</button>
+      <button class="preset-btn" style="color:#f7971e;border-color:#f7971e" onclick="setMargin(15)">15% — Bonne marge</button>
+      <button class="preset-btn" style="color:#f87171;border-color:#f87171" onclick="setMargin(20)">20% — Max</button>
+    </div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-wrap" id="tableWrap">
+    <div class="table-header">
+      <div>Produit</div>
+      <div>Prix Fournis.</div>
+      <div>Prix Vente</div>
+      <div>Bénéfice</div>
+      <div></div>
+    </div>
+    <div id="rowsContainer"></div>
+  </div>
+
+  <button class="add-btn" onclick="addRow()">+ Ajouter un téléphone</button>
+
+  <!-- SUMMARY -->
+  <div class="summary" id="summaryBox" style="display:none">
+    <div>
+      <div class="summary-total-label" id="summaryLabel">— Bénéfice total estimé</div>
+      <div class="summary-total-value" id="summaryValue">0 F</div>
+    </div>
+    <div class="summary-margin-box">
+      <div class="summary-margin-label">Marge appliquée</div>
+      <div class="summary-margin-value" id="summaryMargin">12%</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    💡 <strong>Formule :</strong> Prix de vente = Prix fournisseur × (1 + marge%)
+  </div>
+
+  <script>
+    let margin = 12;
+    let nextId = 1;
+    let rows = [];
+
+    function formatF(n) {
+      return n.toLocaleString('fr-FR') + ' F';
+    }
+
+    function updateMargin(val) {
+      margin = parseInt(val);
+      document.getElementById('marginDisplay').textContent = margin + '%';
+      document.getElementById('marginSlider').value = margin;
+      document.getElementById('summaryMargin').textContent = margin + '%';
+      recalcAll();
+    }
+
+    function setMargin(val) {
+      updateMargin(val);
+    }
+
+    function addRow() {
+      const id = nextId++;
+      rows.push({ id, name: 'Téléphone ' + id, buyPrice: '' });
+      renderRows();
+    }
+
+    function removeRow(id) {
+      if (rows.length === 1) return;
+      rows = rows.filter(r => r.id !== id);
+      renderRows();
+    }
+
+    function onNameChange(id, val) {
+      const r = rows.find(r => r.id === id);
+      if (r) r.name = val;
+    }
+
+    function onPriceChange(id, val) {
+      const r = rows.find(r => r.id === id);
+      if (r) {
+        r.buyPrice = val;
+        updateRow(id);
+        updateSummary();
+      }
+    }
+
+    function calc(buyPrice) {
+      const buy = parseFloat(buyPrice);
+      if (!buy || buy <= 0) return null;
+      const sell = Math.round(buy * (1 + margin / 100));
+      const profit = sell - buy;
+      return { sell, profit };
+    }
+
+    function updateRow(id) {
+      const r = rows.find(r => r.id === id);
+      if (!r) return;
+      const res = calc(r.buyPrice);
+      const sellEl = document.getElementById('sell_' + id);
+      const profEl = document.getElementById('prof_' + id);
+      if (sellEl) {
+        if (res) {
+          sellEl.textContent = formatF(res.sell);
+          sellEl.className = 'cell-sell active';
+          profEl.textContent = '+' + formatF(res.profit);
+          profEl.className = 'cell-profit active';
+        } else {
+          sellEl.textContent = '—';
+          sellEl.className = 'cell-sell empty';
+          profEl.textContent = '—';
+          profEl.className = 'cell-profit empty';
+        }
+      }
+    }
+
+    function recalcAll() {
+      rows.forEach(r => updateRow(r.id));
+      updateSummary();
+    }
+
+    function updateSummary() {
+      const valid = rows.filter(r => calc(r.buyPrice));
+      const total = valid.reduce((acc, r) => acc + (calc(r.buyPrice)?.profit || 0), 0);
+      const box = document.getElementById('summaryBox');
+      if (valid.length > 0) {
+        box.style.display = 'flex';
+        document.getElementById('summaryLabel').textContent =
+          valid.length + ' téléphone' + (valid.length > 1 ? 's' : '') + ' — Bénéfice total estimé';
+        document.getElementById('summaryValue').textContent = '+' + formatF(total);
+      } else {
+        box.style.display = 'none';
+      }
+    }
+
+    function renderRows() {
+      const container = document.getElementById('rowsContainer');
+      container.innerHTML = '';
+      rows.forEach(r => {
+        const res = calc(r.buyPrice);
+        const div = document.createElement('div');
+        div.className = 'table-row';
+        div.id = 'row_' + r.id;
+        div.innerHTML = `
+          <input type="text" value="${r.name}" onchange="onNameChange(${r.id}, this.value)" />
+          <input type="number" placeholder="100000" value="${r.buyPrice}" oninput="onPriceChange(${r.id}, this.value)" />
+          <div id="sell_${r.id}" class="cell-sell ${res ? 'active' : 'empty'}">${res ? formatF(res.sell) : '—'}</div>
+          <div id="prof_${r.id}" class="cell-profit ${res ? 'active' : 'empty'}">${res ? '+' + formatF(res.profit) : '—'}</div>
+          <button class="del-btn" onclick="removeRow(${r.id})">×</button>
+        `;
+        container.appendChild(div);
+      });
+      updateSummary();
+    }
+
+    // Init
+    addRow();
+
+    // ===== PWA ICON & MANIFEST =====
+    function generateIcon(size) {
+      const canvas = document.createElement('canvas');
+      canvas.width = size; canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      const grad = ctx.createLinearGradient(0, 0, size, size);
+      grad.addColorStop(0, '#0f0c29'); grad.addColorStop(1, '#24243e');
+      ctx.fillStyle = grad;
+      const r = size * 0.22;
+      ctx.beginPath();
+      ctx.moveTo(r,0); ctx.lineTo(size-r,0); ctx.quadraticCurveTo(size,0,size,r);
+      ctx.lineTo(size,size-r); ctx.quadraticCurveTo(size,size,size-r,size);
+      ctx.lineTo(r,size); ctx.quadraticCurveTo(0,size,0,size-r);
+      ctx.lineTo(0,r); ctx.quadraticCurveTo(0,0,r,0);
+      ctx.closePath(); ctx.fill();
+      // Orange border
+      ctx.strokeStyle = '#f7971e'; ctx.lineWidth = size*0.04; ctx.stroke();
+      // Phone emoji area
+      ctx.font = (size*0.32) + 'px serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('📱', size/2, size*0.36);
+      // "PRIX" text
+      ctx.fillStyle = '#ffd200';
+      ctx.font = 'bold ' + (size*0.14) + 'px sans-serif';
+      ctx.fillText('CALCUL', size/2, size*0.64);
+      // "%" text
+      ctx.fillStyle = '#f7971e';
+      ctx.font = 'bold ' + (size*0.12) + 'px sans-serif';
+      ctx.fillText('PRIX %', size/2, size*0.80);
+      return canvas.toDataURL('image/png');
+    }
+
+    function setupPWA() {
+      const icon192 = generateIcon(192);
+      const icon512 = generateIcon(512);
+      const appleLink = document.createElement('link');
+      appleLink.rel = 'apple-touch-icon'; appleLink.href = icon192;
+      document.head.appendChild(appleLink);
+      const manifest = {
+        name: 'Calcul Prix Téléphones',
+        short_name: 'Calcul Prix',
+        description: 'Calculateur de prix de vente pour téléphones',
+        start_url: './', display: 'standalone',
+        background_color: '#0f0c29', theme_color: '#f7971e',
+        orientation: 'portrait',
+        icons: [
+          { src: icon192, sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
+          { src: icon512, sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
+        ]
+      };
+      const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+      const manifestLink = document.createElement('link');
+      manifestLink.rel = 'manifest'; manifestLink.href = URL.createObjectURL(blob);
+      document.head.appendChild(manifestLink);
+      if ('serviceWorker' in navigator) {
+        const swBlob = new Blob([`self.addEventListener('install',e=>self.skipWaiting());self.addEventListener('fetch',e=>e.respondWith(fetch(e.request).catch(()=>caches.match(e.request))));`], { type: 'application/javascript' });
+        navigator.serviceWorker.register(URL.createObjectURL(swBlob), { scope: './' });
+      }
+    }
+    setupPWA();
+  </script>
+</body>
+</html>
