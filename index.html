@@ -4,7 +4,10 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-title" content="Prix Téléphones" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Prix Tél" />
+  <meta name="theme-color" content="#f7971e" />
+  <link rel="manifest" href="manifest.json" />
   <title>📱 Calculateur de Prix</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -411,6 +414,11 @@
 
     // Init
     addRow();
+
+    // Service Worker pour PWA
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js');
+    }
   </script>
 </body>
 </html>
