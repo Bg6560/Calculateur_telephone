@@ -1,0 +1,2204 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="theme-color" content="#1a1a2e"/>
+  <title>BG Facture</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <style>
+    :root {
+      --gold: #c9a84c;
+      --gold2: #f0d080;
+      --dark: #0d0d1a;
+      --dark2: #1a1a2e;
+      --dark3: #16213e;
+      --card: rgba(255,255,255,0.05);
+      --border: rgba(201,168,76,0.25);
+      --text: #e8e0d0;
+      --muted: #888;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--dark);
+      font-family: 'DM Sans', sans-serif;
+      color: var(--text);
+      min-height: 100vh;
+      padding: 0;
+    }
+
+    /* NAV */
+    .nav {
+      background: var(--dark2);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .nav-logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px;
+      font-weight: 800;
+      background: linear-gradient(90deg, var(--gold), var(--gold2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .nav-sub { font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; }
+
+    /* TABS */
+    .tabs {
+      display: flex;
+      background: var(--dark2);
+      border-bottom: 1px solid var(--border);
+    }
+    .tab {
+      flex: 1;
+      padding: 13px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+    .tab.active {
+      color: var(--gold);
+      border-bottom-color: var(--gold);
+    }
+
+    /* PAGES */
+    .page { display: none; padding: 20px 16px 40px; }
+    .page.active { display: block; }
+
+    /* SECTION TITLE */
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--gold);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+      margin-top: 24px;
+    }
+    .section-title:first-child { margin-top: 0; }
+
+    /* CARD */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 16px;
+    }
+
+    /* INPUTS */
+    .field { margin-bottom: 14px; }
+    .field label {
+      display: block;
+      font-size: 11px;
+      color: var(--muted);
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    input[type=text], input[type=number], input[type=tel], input[type=date], textarea, select {
+      width: 100%;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 10px;
+      padding: 11px 13px;
+      color: var(--text);
+      font-size: 14px;
+      font-family: 'DM Sans', sans-serif;
+      transition: border-color 0.2s;
+    }
+    input:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: var(--gold);
+    }
+    select option { background: #1a1a2e; }
+    textarea { resize: vertical; min-height: 70px; }
+
+    /* ROW 2 */
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    /* PRODUCT ITEM */
+    .product-item {
+      background: rgba(201,168,76,0.06);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 10px;
+      position: relative;
+    }
+    .product-item .del {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(248,113,113,0.15);
+      border: 1px solid rgba(248,113,113,0.3);
+      border-radius: 7px;
+      color: #f87171;
+      cursor: pointer;
+      font-size: 16px;
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .product-subtotal {
+      text-align: right;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--gold);
+      margin-top: 8px;
+    }
+
+    /* BUTTONS */
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .btn-gold {
+      background: linear-gradient(90deg, var(--gold), var(--gold2));
+      color: #0d0d1a;
+    }
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--gold);
+      margin-bottom: 10px;
+    }
+    .btn-green {
+      background: linear-gradient(90deg, #22c55e, #4ade80);
+      color: #0d0d1a;
+      margin-bottom: 10px;
+    }
+    .btn-blue {
+      background: linear-gradient(90deg, #3b82f6, #60a5fa);
+      color: #fff;
+      margin-bottom: 10px;
+    }
+
+    /* TOTAL BOX */
+    .total-box {
+      background: linear-gradient(135deg, rgba(201,168,76,0.12), rgba(240,208,128,0.06));
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      margin-top: 16px;
+    }
+    .total-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      margin-bottom: 8px;
+      color: var(--muted);
+    }
+    .total-row.main {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--gold2);
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+      margin-bottom: 0;
+    }
+
+    /* HISTORY LIST */
+    .history-item {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 10px;
+      cursor: pointer;
+    }
+    .history-item-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 6px;
+    }
+    .history-client { font-weight: 700; font-size: 15px; }
+    .history-amount { font-weight: 800; color: var(--gold); font-size: 15px; }
+    .history-date { font-size: 11px; color: var(--muted); }
+    .history-num { font-size: 11px; color: var(--muted); }
+
+    /* PREVIEW */
+    #previewArea {
+      background: #fff;
+      color: #000;
+      border-radius: 14px;
+      padding: 24px 20px;
+      margin-bottom: 16px;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .inv-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid #c9a84c;
+    }
+    .inv-logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 24px;
+      font-weight: 800;
+      color: #c9a84c;
+    }
+    .inv-title { font-size: 20px; font-weight: 800; color: #1a1a2e; text-align: right; }
+    .inv-num { font-size: 12px; color: #888; text-align: right; }
+    .inv-section { margin-bottom: 16px; }
+    .inv-section-title {
+      font-size: 10px;
+      font-weight: 700;
+      color: #888;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .inv-client-name { font-size: 16px; font-weight: 700; color: #1a1a2e; }
+    .inv-client-info { font-size: 12px; color: #555; }
+    .inv-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+    .inv-table th {
+      background: #1a1a2e;
+      color: #c9a84c;
+      font-size: 11px;
+      padding: 8px 10px;
+      text-align: left;
+      font-weight: 700;
+    }
+    .inv-table td {
+      padding: 8px 10px;
+      font-size: 12px;
+      border-bottom: 1px solid #eee;
+      color: #222;
+    }
+    .inv-table tr:last-child td { border-bottom: none; }
+    .inv-totals { text-align: right; }
+    .inv-totals-row { display: flex; justify-content: flex-end; gap: 20px; font-size: 13px; color: #555; margin-bottom: 4px; }
+    .inv-total-main { display: flex; justify-content: flex-end; gap: 20px; font-size: 18px; font-weight: 800; color: #1a1a2e; margin-top: 8px; padding-top: 8px; border-top: 2px solid #c9a84c; }
+    .inv-footer { margin-top: 20px; padding-top: 14px; border-top: 1px solid #eee; }
+    .inv-sign { margin-top: 30px; }
+    .inv-sign-line { border-top: 1px solid #ccc; width: 160px; margin-top: 40px; }
+    .inv-sign-label { font-size: 11px; color: #888; margin-top: 4px; }
+    .inv-notes { font-size: 11px; color: #777; font-style: italic; }
+    .inv-logo-img { max-height: 70px; max-width: 140px; object-fit: contain; display: block; margin-bottom: 6px; }
+    .inv-footer-blocks { margin-top: 18px; padding-top: 14px; border-top: 1px solid #e5e5e5; }
+    .inv-footer-block { margin-bottom: 10px; padding: 10px 12px; border-radius: 8px; background: #f9f9f9; border-left: 3px solid #c9a84c; }
+    .inv-footer-block-title { font-size: 10px; font-weight: 700; color: #888; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 4px; }
+    .inv-footer-block-text { font-size: 11px; color: #555; line-height: 1.6; }
+    .inv-thankyou { text-align: center; margin-top: 14px; padding: 12px; background: linear-gradient(135deg,#fffbf0,#fff8e0); border-radius: 10px; border: 1px solid rgba(201,168,76,.3); }
+    .inv-thankyou-text { font-size: 13px; font-weight: 700; color: #c9a84c; }
+    .inv-thankyou-sub { font-size: 11px; color: #888; margin-top: 3px; }
+
+    /* ===== TEMPLATE SELECTOR ===== */
+    .tpl-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 4px; }
+    .tpl-card {
+      border-radius: 12px; overflow: hidden; cursor: pointer;
+      border: 2px solid transparent; transition: all .2s;
+      box-shadow: 0 2px 10px rgba(0,0,0,.2);
+    }
+    .tpl-card.selected { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(201,168,76,.25); }
+    .tpl-card:active { transform: scale(.97); }
+    .tpl-preview { height: 90px; display: flex; flex-direction: column; justify-content: space-between; padding: 8px; }
+    .tpl-name { font-size: 10px; font-weight: 700; text-align: center; padding: 5px; }
+    /* Preview mini-designs */
+    .tpl-line { height: 4px; border-radius: 2px; margin-bottom: 3px; }
+    .tpl-dot { width: 22px; height: 22px; border-radius: 50%; margin-bottom: 3px; }
+
+    /* ===== FOURNISSEURS / CATALOGUE ===== */
+    .marg-block { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .marg-badge { background: linear-gradient(90deg, var(--gold), var(--gold2)); color: #0d0d1a; font-weight: 800; font-size: 16px; border-radius: 10px; padding: 5px 14px; min-width: 58px; text-align: center; }
+    .marg-presets { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 4px; }
+    .marg-chip { border-radius: 8px; padding: 5px 11px; font-size: 11px; font-weight: 700; cursor: pointer; border: 1px solid rgba(255,255,255,.15); background: transparent; color: var(--muted); font-family: inherit; }
+    .marg-chip.active { background: rgba(201,168,76,.18); border-color: var(--gold); color: var(--gold2); }
+    .sup-row { display: grid; grid-template-columns: 1fr 70px 70px 60px; gap: 5px; padding: 9px 8px; border-bottom: 1px solid rgba(255,255,255,.06); align-items: center; font-size: 11px; }
+    .sup-row.head { font-size: 9px; font-weight: 700; color: var(--gold); text-transform: uppercase; letter-spacing: .5px; border-bottom: 1px solid var(--border); }
+    .sup-name { font-weight: 600; }
+    .sup-cost { color: var(--muted); text-align: right; }
+    .sup-sell { color: var(--gold2); font-weight: 700; text-align: right; }
+    .sup-profit { color: #4ade80; font-weight: 700; text-align: right; }
+    .cat-item { display: flex; justify-content: space-between; align-items: center; padding: 9px 10px; background: rgba(255,255,255,.03); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 6px; }
+    .cat-item-name { font-size: 12px; font-weight: 600; }
+    .cat-item-prices { font-size: 10px; color: var(--muted); margin-top: 2px; }
+    .cat-del { background: rgba(248,113,113,.15); border: 1px solid rgba(248,113,113,.3); color: #f87171; border-radius: 6px; width: 26px; height: 26px; font-size: 14px; cursor: pointer; }
+    .stats-bar { display: flex; gap: 8px; margin-bottom: 16px; }
+    .stat-card { flex: 1; background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px; text-align: center; }
+    .stat-num { font-size: 18px; font-weight: 800; }
+    .stat-lbl { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-top: 2px; }
+    .catalog-select { width: 100%; margin-bottom: 8px; font-size: 12px !important; padding: 9px 10px !important; }
+    .catalog-hint { font-size: 10px; color: var(--muted); margin-bottom: 8px; font-style: italic; }
+    .profit-line { font-size: 11px; color: #4ade80; font-weight: 700; margin-top: 4px; }
+
+    /* ===== COMPTE / FIREBASE ===== */
+    #login-overlay {
+      position: fixed; inset: 0; background: radial-gradient(ellipse at 50% 40%, #1a1a2e, #0d0d1a);
+      z-index: 9000; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 24px;
+    }
+    #login-overlay.hide { display: none; }
+    .login-logo { font-family: 'Playfair Display', serif; font-size: 32px; font-weight: 800;
+      background: linear-gradient(90deg, var(--gold), var(--gold2)); -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent; margin-bottom: 6px; }
+    .login-sub { font-size: 12px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 40px; }
+    .login-card { background: rgba(255,255,255,.05); border: 1px solid var(--border); border-radius: 20px;
+      padding: 28px 24px; width: 100%; max-width: 380px; text-align: center; }
+    .login-title { font-size: 18px; font-weight: 800; color: var(--text); margin-bottom: 6px; }
+    .login-desc { font-size: 12px; color: var(--muted); margin-bottom: 24px; line-height: 1.6; }
+    .btn-google { display: flex; align-items: center; justify-content: center; gap: 12px;
+      width: 100%; padding: 14px; border-radius: 12px; background: #fff; color: #333;
+      font-size: 14px; font-weight: 700; cursor: pointer; border: none; font-family: 'DM Sans', sans-serif; margin-bottom: 12px; }
+    .btn-google:active { opacity: .85; }
+    .btn-google img { width: 20px; height: 20px; }
+    .login-skip { font-size: 11px; color: var(--muted); cursor: pointer; text-decoration: underline; margin-top: 8px; display: block; }
+
+    /* Compte badge dans la nav */
+    .nav-account { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+    .nav-avatar { width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--gold); object-fit: cover; }
+    .nav-avatar-placeholder { width: 32px; height: 32px; border-radius: 50%; background: rgba(201,168,76,.15);
+      border: 2px solid var(--border); display: flex; align-items: center; justify-content: center;
+      font-size: 14px; color: var(--muted); }
+    .sync-badge { font-size: 9px; padding: 2px 7px; border-radius: 10px; font-weight: 700; }
+    .sync-ok { background: rgba(74,222,128,.15); color: #4ade80; border: 1px solid rgba(74,222,128,.3); }
+    .sync-off { background: rgba(255,255,255,.06); color: var(--muted); border: 1px solid rgba(255,255,255,.1); }
+    .sync-ing { background: rgba(201,168,76,.15); color: var(--gold); border: 1px solid var(--border); }
+
+    /* Carte patron / vue équipe */
+    .team-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .team-filter { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+    .team-chip { padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 600;
+      cursor: pointer; border: 1px solid rgba(255,255,255,.12); background: transparent; color: var(--muted); }
+    .team-chip.active { background: rgba(201,168,76,.15); border-color: var(--gold); color: var(--gold2); }
+    .hist-user-badge { font-size: 9px; padding: 2px 7px; border-radius: 10px;
+      background: rgba(96,165,250,.12); border: 1px solid rgba(96,165,250,.3); color: #93c5fd; font-weight: 700; }
+
+    /* Firebase config dans réglages */
+    .firebase-setup { background: rgba(255,165,0,.06); border: 1px solid rgba(255,165,0,.2);
+      border-radius: 12px; padding: 14px; margin-bottom: 14px; }
+    .firebase-step { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 10px; font-size: 12px; color: var(--text); line-height: 1.5; }
+    .firebase-step-num { width: 22px; height: 22px; border-radius: 50%; background: var(--gold);
+      color: #0d0d1a; font-weight: 800; font-size: 11px; display: flex; align-items: center;
+      justify-content: center; flex-shrink: 0; margin-top: 1px; }
+    .firebase-link { color: var(--gold2); text-decoration: underline; }
+
+    /* ===== TOAST NOTIFICATION ===== */
+    #toast {
+      position: fixed; left: 16px; right: 16px; bottom: 24px;
+      z-index: 99999; display: flex; justify-content: center;
+      pointer-events: none;
+    }
+    .toast-msg {
+      max-width: 480px; width: 100%;
+      padding: 14px 18px; border-radius: 12px;
+      font-size: 13px; font-weight: 600; text-align: center;
+      box-shadow: 0 6px 24px rgba(0,0,0,.4);
+      opacity: 0; transform: translateY(20px);
+      transition: opacity .25s, transform .25s;
+    }
+    .toast-msg.show { opacity: 1; transform: translateY(0); }
+    .toast-success { background: linear-gradient(90deg,#16a34a,#22c55e); color: #fff; }
+    .toast-error { background: linear-gradient(90deg,#dc2626,#ef4444); color: #fff; }
+    .toast-info { background: linear-gradient(90deg, var(--gold), var(--gold2)); color: #0d0d1a; }
+    .chip-g { padding: 7px 13px; border-radius: 20px; border: 1px solid rgba(255,255,255,.12); background: transparent; color: var(--muted); font-size: 12px; font-weight: 600; cursor: pointer; display: inline-block; transition: all .15s; user-select: none; }
+    .chip-g.active { background: rgba(201,168,76,.15); border-color: var(--gold); color: var(--gold2); }
+    .inv-garantie-badge { display: inline-flex; align-items: center; gap: 6px; background: #f0fdf4; border: 1px solid #86efac; border-radius: 20px; padding: 5px 14px; font-size: 12px; font-weight: 700; color: #16a34a; margin-top: 4px; }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+    }
+    .empty-icon { font-size: 40px; margin-bottom: 12px; }
+    .empty-text { font-size: 14px; }
+
+    /* LOGO UPLOAD */
+    .logo-upload-box {
+      border: 2px dashed rgba(201,168,76,.35);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color .2s;
+      margin-bottom: 10px;
+    }
+    .logo-upload-box:hover { border-color: var(--gold); }
+    .logo-preview-wrap {
+      display: none;
+      position: relative;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    .logo-preview-wrap img {
+      max-height: 90px;
+      max-width: 100%;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    .logo-del-btn {
+      position: absolute;
+      top: -8px; right: -8px;
+      background: rgba(248,113,113,.9);
+      border: none;
+      border-radius: 50%;
+      color: #fff;
+      width: 24px; height: 24px;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'DM Sans', sans-serif;
+    }
+  
+      width: 70px;
+      height: 70px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--gold), var(--gold2));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 30px;
+      margin: 0 auto 16px;
+    }
+  </style>
+</head>
+<body>
+
+<div id="toast"><div class="toast-msg" id="toastMsg"></div></div>
+
+<!-- ===== LOGIN OVERLAY ===== -->
+<div id="login-overlay">
+  <div class="login-logo">BG Facture</div>
+  <div class="login-sub">Gestion Commerciale</div>
+  <div class="login-card">
+    <div class="login-title">👋 Bienvenue</div>
+    <div class="login-desc">Connecte-toi pour synchroniser tes factures sur tous tes appareils et accéder à l'historique de ton équipe.</div>
+    <button class="btn-google" onclick="signInGoogle()">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google"/>
+      Se connecter avec Gmail
+    </button>
+    <span class="login-skip" onclick="skipLogin()">Continuer sans compte (hors ligne)</span>
+  </div>
+</div>
+
+<div class="nav">
+  <div>
+    <div class="nav-logo">BG Facture</div>
+    <div class="nav-sub">Gestion commerciale</div>
+  </div>
+  <div class="nav-account" onclick="toggleAccountMenu()">
+    <div>
+      <div class="sync-badge sync-off" id="syncBadge">Hors ligne</div>
+    </div>
+    <div id="navAvatarWrap">
+      <div class="nav-avatar-placeholder" id="navAvatarPlaceholder">👤</div>
+      <img class="nav-avatar" id="navAvatarImg" src="" alt="" style="display:none"/>
+    </div>
+  </div>
+</div>
+
+<!-- MENU COMPTE (dropdown) -->
+<div id="accountMenu" style="display:none;position:fixed;top:64px;right:12px;z-index:500;background:var(--dark2);border:1px solid var(--border);border-radius:14px;padding:14px;min-width:220px;box-shadow:0 8px 32px rgba(0,0,0,.5);">
+  <div id="accountMenuUser" style="margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border);">
+    <div style="font-size:13px;font-weight:700;color:var(--text)" id="menuUserName">—</div>
+    <div style="font-size:11px;color:var(--muted)" id="menuUserEmail">—</div>
+    <div id="menuPatronBadge" style="display:none;margin-top:5px;font-size:10px;font-weight:700;color:var(--gold);background:rgba(201,168,76,.1);border:1px solid var(--border);border-radius:6px;padding:2px 8px;display:inline-block;">👑 Patron</div>
+  </div>
+  <button class="btn btn-outline" style="margin-bottom:8px;padding:10px;font-size:12px;" onclick="syncNow()">🔄 Synchroniser maintenant</button>
+  <button class="btn btn-red" style="padding:10px;font-size:12px;margin-bottom:0;" onclick="doSignOut()">🚪 Se déconnecter</button>
+</div>
+  <div style="font-size:24px">🧾</div>
+</div>
+
+<div class="tabs">
+  <div class="tab active" data-tab="create" onclick="showTab('create',this)">✏️ Créer</div>
+  <div class="tab" data-tab="fournisseurs" onclick="showTab('fournisseurs',this)">📋 Fournisseurs</div>
+  <div class="tab" data-tab="preview" onclick="showTab('preview',this)">👁️ Aperçu</div>
+  <div class="tab" data-tab="history" onclick="showTab('history',this)">📊 Historique</div>
+  <div class="tab" data-tab="settings" onclick="showTab('settings',this)">⚙️ Réglages</div>
+</div>
+
+<!-- ===== PAGE CRÉER ===== -->
+<div id="tab-create" class="page active">
+
+  <div class="section-title">Informations Facture</div>
+  <div class="card">
+    <div class="row2">
+      <div class="field">
+        <label>N° Facture</label>
+        <input type="text" id="invNum" placeholder="FAC-001"/>
+      </div>
+      <div class="field">
+        <label>Date</label>
+        <input type="date" id="invDate"/>
+      </div>
+    </div>
+    <div class="field">
+      <label>Statut</label>
+      <select id="invStatus">
+        <option value="Payée">✅ Payée</option>
+        <option value="En attente">⏳ En attente</option>
+        <option value="Annulée">❌ Annulée</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="section-title">Informations Client</div>
+  <div class="card">
+    <div class="field">
+      <label>Nom du client *</label>
+      <input type="text" id="clientName" placeholder="Ex: Jean Kouassi"/>
+    </div>
+    <div class="field">
+      <label>Téléphone</label>
+      <input type="tel" id="clientPhone" placeholder="Ex: 07 00 00 00 00"/>
+    </div>
+    <div class="field">
+      <label>Adresse / Ville</label>
+      <input type="text" id="clientAddr" placeholder="Ex: Abidjan, Cocody"/>
+    </div>
+  </div>
+
+  <div class="section-title">Produits / Services</div>
+  <div id="productsList"></div>
+
+  <button class="btn btn-outline" onclick="addProduct()">+ Ajouter un produit</button>
+
+  <div class="total-box" id="totalBox">
+    <div class="total-row"><span>Sous-total</span><span id="subtotalVal">0 F</span></div>
+    <div class="total-row">
+      <span>TVA (<span id="tvaLabel">0</span>%)</span>
+      <span id="tvaVal">0 F</span>
+    </div>
+    <div class="total-row main"><span>TOTAL</span><span id="totalVal">0 F</span></div>
+  </div>
+
+  <div class="section-title">Options supplémentaires</div>
+  <div class="card">
+    <div class="field">
+      <label>TVA (%)</label>
+      <input type="number" id="tvaRate" placeholder="0" value="0" oninput="recalc()"/>
+    </div>
+    <div class="field">
+      <label>🛡️ Période de garantie</label>
+      <div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:4px;" id="chips-garantie">
+        <div class="chip-g" onclick="selGarantie(this,'Aucune garantie')">❌ Aucune</div>
+        <div class="chip-g" onclick="selGarantie(this,'1 semaine')">1 sem.</div>
+        <div class="chip-g" onclick="selGarantie(this,'1 mois')">1 mois</div>
+        <div class="chip-g" onclick="selGarantie(this,'3 mois')">3 mois</div>
+        <div class="chip-g" onclick="selGarantie(this,'6 mois')">6 mois</div>
+        <div class="chip-g" onclick="selGarantie(this,'12 mois')">12 mois ⭐</div>
+      </div>
+      <input type="hidden" id="invGarantie" value=""/>
+    </div>
+    <div class="field">
+      <label>Notes / Conditions</label>
+      <textarea id="invNotes" placeholder="Ex: Merci pour votre confiance. Paiement à réception."></textarea>
+    </div>
+    <div class="field">
+      <label>Signature / Tampon</label>
+      <input type="text" id="invSign" placeholder="Ex: BG Store — Gérant"/>
+    </div>
+  </div>
+
+  <button class="btn btn-gold" onclick="generateInvoice()">🧾 Générer la Facture</button>
+</div>
+
+<!-- ===== PAGE FOURNISSEURS ===== -->
+<div id="tab-fournisseurs" class="page">
+
+  <div class="section-title">Liste du fournisseur</div>
+  <div class="card">
+    <textarea id="supplierText" placeholder="Colle ici la liste de ton fournisseur...
+
+Exemples acceptés :
+Samsung Galaxy S24 Ultra à 280 000 F
+iPhone 14 Pro Max — 285000
+Redmi Note 13 Pro : 145 000 FCFA" style="min-height:120px;"></textarea>
+    <div id="supplierError" style="display:none;color:#f87171;font-size:12px;margin-top:6px;"></div>
+  </div>
+
+  <div class="section-title">Marge à appliquer</div>
+  <div class="card">
+    <div class="marg-block">
+      <input type="range" min="1" max="50" value="12" id="margSlider" oninput="setSupplierMargin(this.value)" style="flex:1;accent-color:var(--gold);"/>
+      <div class="marg-badge" id="margBadge">12%</div>
+    </div>
+    <div class="marg-presets">
+      <div class="marg-chip" onclick="setSupplierMargin(5)">5%</div>
+      <div class="marg-chip active" onclick="setSupplierMargin(12)">12% ⭐</div>
+      <div class="marg-chip" onclick="setSupplierMargin(15)">15%</div>
+      <div class="marg-chip" onclick="setSupplierMargin(20)">20%</div>
+      <div class="marg-chip" onclick="setSupplierMargin(25)">25%</div>
+      <div class="marg-chip" onclick="setSupplierMargin(30)">30%</div>
+    </div>
+  </div>
+
+  <button class="btn btn-gold" onclick="analyzeSupplierList()">🔍 Analyser & Calculer les prix</button>
+
+  <div id="supplierResultsWrap" style="display:none;">
+    <div class="section-title">Résultats (<span id="supCount">0</span> produits)</div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div class="sup-row head">
+        <div>Produit</div><div style="text-align:right">Achat</div><div style="text-align:right">Vente</div><div style="text-align:right">Bénéf.</div>
+      </div>
+      <div id="supplierResultsList"></div>
+    </div>
+    <button class="btn btn-green" onclick="saveCatalog()">💾 Enregistrer dans le catalogue</button>
+  </div>
+
+  <div class="section-title">📦 Catalogue enregistré</div>
+  <div id="catalogEmpty" class="empty-state" style="padding:20px;">
+    <div style="font-size:13px;color:var(--muted)">Aucun produit dans le catalogue.<br>Analyse une liste ci-dessus pour commencer.</div>
+  </div>
+  <div id="catalogList"></div>
+  <button class="btn btn-outline" id="clearCatalogBtn" onclick="clearCatalog()" style="display:none;">🗑️ Vider le catalogue</button>
+
+</div>
+
+
+<!-- ===== PAGE APERÇU ===== -->
+<div id="tab-preview" class="page">
+  <div id="previewEmpty" class="empty-state">
+    <div class="empty-icon">📄</div>
+    <div class="empty-text">Crée une facture pour voir l'aperçu ici</div>
+  </div>
+  <div id="previewContent" style="display:none">
+    <div id="previewArea"></div>
+    <button class="btn btn-green" onclick="shareAsImage()">📲 Envoyer comme image sur WhatsApp</button>
+    <button class="btn btn-blue" onclick="printInvoice()">🖨️ Imprimer / Enregistrer PDF</button>
+    <button class="btn btn-outline" onclick="saveToHistory()">💾 Sauvegarder dans l'historique</button>
+  </div>
+</div>
+
+<!-- ===== PAGE HISTORIQUE ===== -->
+<div id="tab-history" class="page">
+  <div class="stats-bar" id="histStatsBar" style="display:none;">
+    <div class="stat-card"><div class="stat-num" id="statCount" style="color:var(--text)">0</div><div class="stat-lbl">Factures</div></div>
+    <div class="stat-card"><div class="stat-num" id="statRevenue" style="color:var(--gold2)">0</div><div class="stat-lbl">Ventes</div></div>
+    <div class="stat-card"><div class="stat-num" id="statProfit" style="color:#4ade80">0</div><div class="stat-lbl">Bénéfices</div></div>
+  </div>
+  <!-- Filtre équipe (visible seulement pour le patron) -->
+  <div id="teamFilterWrap" style="display:none;">
+    <div style="font-size:10px;font-weight:700;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">👑 Vue Patron — Filtrer par vendeur</div>
+    <div class="team-filter" id="teamFilter"></div>
+  </div>
+  <div id="historyEmpty" class="empty-state">
+    <div class="empty-icon">📋</div>
+    <div class="empty-text">Aucune facture sauvegardée</div>
+  </div>
+  <div id="historyList"></div>
+</div>
+
+<!-- ===== PAGE RÉGLAGES ===== -->
+<div id="tab-settings" class="page">
+  <div class="settings-avatar">🏪</div>
+
+  <!-- COMPTE -->
+  <div class="section-title">☁️ Synchronisation & Compte</div>
+  <div id="firebase-config-section" class="card">
+    <div id="firebase-connected-view" style="display:none;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+        <img id="cfg-avatar" src="" style="width:40px;height:40px;border-radius:50%;border:2px solid var(--gold);" alt=""/>
+        <div>
+          <div style="font-size:14px;font-weight:700;" id="cfg-name">—</div>
+          <div style="font-size:11px;color:var(--muted);" id="cfg-email">—</div>
+        </div>
+        <div id="cfg-patron-badge" style="display:none;margin-left:auto;font-size:10px;font-weight:700;color:var(--gold);background:rgba(201,168,76,.1);border:1px solid var(--border);border-radius:6px;padding:3px 10px;">👑 Patron</div>
+      </div>
+      <div style="font-size:11px;color:#4ade80;margin-bottom:12px;">✅ Synchronisation active — tes factures sont sauvegardées dans le cloud</div>
+      <button class="btn btn-red" style="padding:10px;font-size:12px;margin-bottom:0;" onclick="doSignOut()">🚪 Se déconnecter</button>
+    </div>
+    <div id="firebase-setup-view">
+      <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:8px;">Connecte-toi pour synchroniser</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">Tes factures seront disponibles sur tous tes appareils automatiquement.</div>
+      <button class="btn-google" onclick="signInGoogle()">
+        <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google"/>
+        Se connecter avec Gmail
+      </button>
+    </div>
+  </div>
+  <div class="card">
+    <div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Choisis le style visuel de tes factures</div>
+    <div class="tpl-grid" id="tpl-grid">
+
+      <!-- Template 1 : Classique Doré -->
+      <div class="tpl-card selected" id="tpl-1" onclick="selectTemplate(1)">
+        <div class="tpl-preview" style="background:#fff;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div style="width:28px;height:28px;background:linear-gradient(135deg,#c9a84c,#f0d080);border-radius:6px;"></div>
+            <div style="text-align:right;"><div style="font-size:6px;font-weight:800;color:#1a1a2e;letter-spacing:1px;">FACTURE</div><div style="width:30px;height:2px;background:#c9a84c;margin-top:2px;margin-left:auto;"></div></div>
+          </div>
+          <div style="width:100%;height:1px;background:#f0e8d0;margin:4px 0;"></div>
+          <div><div style="width:60%;height:3px;background:#f0f0f0;border-radius:2px;margin-bottom:2px;"></div><div style="width:40%;height:3px;background:#f0f0f0;border-radius:2px;"></div></div>
+          <div style="background:linear-gradient(90deg,#c9a84c,#f0d080);border-radius:4px;padding:3px 5px;display:flex;justify-content:space-between;"><span style="font-size:6px;color:#0d0d1a;font-weight:700;">TOTAL</span><span style="font-size:6px;color:#0d0d1a;font-weight:700;">XXX F</span></div>
+        </div>
+        <div class="tpl-name" style="background:#f9f5eb;color:#c9a84c;">✨ Classique Doré</div>
+      </div>
+
+      <!-- Template 2 : Sombre Premium -->
+      <div class="tpl-card" id="tpl-2" onclick="selectTemplate(2)">
+        <div class="tpl-preview" style="background:#0d0d1a;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div style="width:28px;height:28px;background:linear-gradient(135deg,#c9a84c,#f0d080);border-radius:6px;"></div>
+            <div style="text-align:right;"><div style="font-size:6px;font-weight:800;color:#f0d080;letter-spacing:1px;">FACTURE</div><div style="width:30px;height:2px;background:#c9a84c;margin-top:2px;margin-left:auto;"></div></div>
+          </div>
+          <div style="width:100%;height:1px;background:rgba(201,168,76,.3);margin:4px 0;"></div>
+          <div><div style="width:60%;height:3px;background:rgba(255,255,255,.1);border-radius:2px;margin-bottom:2px;"></div><div style="width:40%;height:3px;background:rgba(255,255,255,.1);border-radius:2px;"></div></div>
+          <div style="background:linear-gradient(90deg,#c9a84c,#f0d080);border-radius:4px;padding:3px 5px;display:flex;justify-content:space-between;"><span style="font-size:6px;color:#0d0d1a;font-weight:700;">TOTAL</span><span style="font-size:6px;color:#0d0d1a;font-weight:700;">XXX F</span></div>
+        </div>
+        <div class="tpl-name" style="background:#1a1a2e;color:#f0d080;">🌙 Sombre Premium</div>
+      </div>
+
+      <!-- Template 3 : Moderne Bleu -->
+      <div class="tpl-card" id="tpl-3" onclick="selectTemplate(3)">
+        <div class="tpl-preview" style="background:#fff;">
+          <div style="background:linear-gradient(90deg,#1d4ed8,#3b82f6);height:20px;border-radius:4px;display:flex;align-items:center;padding:0 6px;justify-content:space-between;">
+            <div style="width:14px;height:14px;background:rgba(255,255,255,.3);border-radius:3px;"></div>
+            <div style="font-size:6px;color:#fff;font-weight:700;letter-spacing:1px;">FACTURE</div>
+          </div>
+          <div><div style="width:60%;height:3px;background:#f0f0f0;border-radius:2px;margin-bottom:2px;margin-top:4px;"></div><div style="width:40%;height:3px;background:#f0f0f0;border-radius:2px;"></div></div>
+          <div style="background:#1d4ed8;border-radius:4px;padding:3px 5px;display:flex;justify-content:space-between;"><span style="font-size:6px;color:#fff;font-weight:700;">TOTAL</span><span style="font-size:6px;color:#fff;font-weight:700;">XXX F</span></div>
+        </div>
+        <div class="tpl-name" style="background:#eff6ff;color:#1d4ed8;">💎 Moderne Bleu</div>
+      </div>
+
+      <!-- Template 4 : Minimaliste -->
+      <div class="tpl-card" id="tpl-4" onclick="selectTemplate(4)">
+        <div class="tpl-preview" style="background:#fff;border:1px solid #e5e5e5;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+            <div style="font-size:8px;font-weight:900;color:#111;letter-spacing:-0.5px;">FACTURE</div>
+            <div style="width:3px;height:30px;background:#111;border-radius:2px;"></div>
+          </div>
+          <div style="border-bottom:1px solid #111;margin:4px 0;"></div>
+          <div><div style="width:70%;height:2px;background:#e5e5e5;border-radius:2px;margin-bottom:2px;"></div><div style="width:50%;height:2px;background:#e5e5e5;border-radius:2px;"></div></div>
+          <div style="border:2px solid #111;border-radius:3px;padding:2px 5px;display:flex;justify-content:space-between;"><span style="font-size:6px;color:#111;font-weight:700;">TOTAL</span><span style="font-size:6px;color:#111;font-weight:700;">XXX F</span></div>
+        </div>
+        <div class="tpl-name" style="background:#f5f5f5;color:#111;">⬜ Minimaliste</div>
+      </div>
+
+      <!-- Template 5 : Émeraude -->
+      <div class="tpl-card" id="tpl-5" onclick="selectTemplate(5)">
+        <div class="tpl-preview" style="background:#fff;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div style="width:28px;height:28px;background:linear-gradient(135deg,#059669,#34d399);border-radius:50%;"></div>
+            <div style="text-align:right;"><div style="font-size:6px;font-weight:800;color:#065f46;letter-spacing:1px;">FACTURE</div><div style="width:30px;height:2px;background:#059669;margin-top:2px;margin-left:auto;"></div></div>
+          </div>
+          <div style="width:100%;height:1px;background:#d1fae5;margin:4px 0;"></div>
+          <div><div style="width:60%;height:3px;background:#f0f0f0;border-radius:2px;margin-bottom:2px;"></div><div style="width:40%;height:3px;background:#f0f0f0;border-radius:2px;"></div></div>
+          <div style="background:linear-gradient(90deg,#059669,#34d399);border-radius:4px;padding:3px 5px;display:flex;justify-content:space-between;"><span style="font-size:6px;color:#fff;font-weight:700;">TOTAL</span><span style="font-size:6px;color:#fff;font-weight:700;">XXX F</span></div>
+        </div>
+        <div class="tpl-name" style="background:#ecfdf5;color:#059669;">🌿 Émeraude</div>
+      </div>
+
+      <!-- Template 6 : Bordeaux Luxe -->
+      <div class="tpl-card" id="tpl-6" onclick="selectTemplate(6)">
+        <div class="tpl-preview" style="background:#fff;">
+          <div style="background:#7f1d1d;padding:6px;border-radius:4px;display:flex;justify-content:space-between;align-items:center;">
+            <div style="width:16px;height:16px;background:rgba(255,255,255,.2);border-radius:3px;"></div>
+            <div style="font-size:6px;color:#fca5a5;font-weight:700;letter-spacing:1px;">FACTURE</div>
+          </div>
+          <div><div style="width:60%;height:3px;background:#f0f0f0;border-radius:2px;margin-bottom:2px;margin-top:5px;"></div><div style="width:40%;height:3px;background:#f0f0f0;border-radius:2px;"></div></div>
+          <div style="background:#7f1d1d;border-radius:4px;padding:3px 5px;display:flex;justify-content:space-between;margin-top:4px;"><span style="font-size:6px;color:#fca5a5;font-weight:700;">TOTAL</span><span style="font-size:6px;color:#fca5a5;font-weight:700;">XXX F</span></div>
+        </div>
+        <div class="tpl-name" style="background:#fef2f2;color:#7f1d1d;">🍷 Bordeaux Luxe</div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="section-title">Logo du business</div>
+  <div class="card">
+    <div class="logo-preview-wrap" id="logoPreviewWrap">
+      <img id="logoPreviewImg" src="" alt="Logo"/>
+      <button class="logo-del-btn" onclick="deleteLogo()">×</button>
+    </div>
+    <label for="logoFileInput" class="logo-upload-box">
+      <div style="font-size:28px;margin-bottom:6px">🖼️</div>
+      <div style="font-size:13px;font-weight:600;color:var(--gold)">Appuie pour choisir ton logo</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:3px">PNG, JPG — apparaîtra sur la facture</div>
+    </label>
+    <input type="file" id="logoFileInput" accept="image/*" style="display:none" onchange="uploadLogo(this)"/>
+  </div>
+
+  <div class="section-title">Mon Business</div>
+  <div class="card">
+    <div class="field">
+      <label>Nom du business</label>
+      <input type="text" id="bizName" placeholder="BG Facture" value="BG Facture"/>
+    </div>
+    <div class="field">
+      <label>Téléphone</label>
+      <input type="tel" id="bizPhone" placeholder="07 00 00 00 00"/>
+    </div>
+    <div class="field">
+      <label>Adresse</label>
+      <input type="text" id="bizAddr" placeholder="Abidjan, Côte d'Ivoire"/>
+    </div>
+    <div class="field">
+      <label>Email</label>
+      <input type="text" id="bizEmail" placeholder="monbusiness@email.com"/>
+    </div>
+    <div class="field">
+      <label>Slogan</label>
+      <input type="text" id="bizSlogan" placeholder="La qualité à votre service"/>
+    </div>
+    <div class="field">
+      <label>Préfixe numéro facture</label>
+      <input type="text" id="invPrefix" value="FAC-" placeholder="FAC-"/>
+    </div>
+  </div>
+
+  <div class="section-title">Message & Politique</div>
+  <div class="card">
+    <div class="field">
+      <label>Message de remerciement</label>
+      <textarea id="bizThanks" placeholder="Ex: Merci pour votre confiance ! Votre satisfaction est notre priorité. 🙏" style="min-height:60px"></textarea>
+    </div>
+    <div class="field">
+      <label>Garantie</label>
+      <textarea id="bizGarantie" placeholder="Ex: Tous nos appareils sont garantis 3 mois contre tout défaut de fabrication." style="min-height:60px"></textarea>
+    </div>
+    <div class="field">
+      <label>Politique de remboursement</label>
+      <textarea id="bizRemboursement" placeholder="Ex: Tout retour doit être effectué dans les 7 jours suivant l'achat. L'appareil doit être dans son état d'origine." style="min-height:70px"></textarea>
+    </div>
+  </div>
+  <button class="btn btn-gold" onclick="saveSettings()">💾 Sauvegarder les réglages</button>
+  <div id="settingsSaved" style="display:none;text-align:center;color:#4ade80;margin-top:10px;font-size:13px">✅ Réglages sauvegardés !</div>
+</div>
+
+<script>
+  // ===== DATA =====
+  let products = [];
+  let invoiceCounter = 1;
+  let invHistory = JSON.parse(safeGet('bg_facture_history', '[]'));
+  let settings = JSON.parse(safeGet('bg_facture_settings', '{}'));
+  let currentInvoice = null;
+  let selectedTemplate = parseInt(safeGet('bg_facture_tpl', '1'));
+  let supplierCatalog = JSON.parse(safeGet('bg_supplier_catalog', '[]'));
+  let parsedSupplierList = [];
+  let supplierMargin = 12;
+
+  // ===== FIREBASE STATE =====
+  let fbApp = null, fbAuth = null, fbDb = null;
+  let currentUser = null;
+  let isPatron = false;
+  let patronEmail = '';
+  let teamFilterUid = 'all';
+
+  // ✅ CONFIG FIREBASE INTÉGRÉE - employés n'ont rien à configurer
+  const FIREBASE_CONFIG = {
+    apiKey: "AIzaSyCUDv7PUAhXjFoVL3g7D70YdSyu---CDRk",
+    authDomain: "bg-market-e17cc.firebaseapp.com",
+    projectId: "bg-market-e17cc",
+    appId: "1:392453533850:web:93545121ad9ce0cea16f23",
+    patronEmail: "bgmarket99@gmail.com"
+  };
+
+  // Init automatique au démarrage
+  function autoInitFirebase() {
+    try {
+      fbApp = firebase.initializeApp(FIREBASE_CONFIG, 'bgfacture');
+      fbAuth = firebase.auth(fbApp);
+      fbDb = firebase.firestore(fbApp);
+      patronEmail = FIREBASE_CONFIG.patronEmail;
+
+      fbAuth.onAuthStateChanged(user => {
+        if (user) {
+          currentUser = user;
+          isPatron = user.email.toLowerCase() === patronEmail.toLowerCase();
+          document.getElementById('login-overlay').classList.add('hide');
+          updateNavAccount(user);
+          updateSyncBadge('ok');
+          updateSettingsConnectedView(user);
+          loadFromFirebase();
+        } else {
+          currentUser = null;
+          isPatron = false;
+          updateSyncBadge('off');
+          updateNavAccount(null);
+          updateSettingsConnectedView(null);
+          document.getElementById('login-overlay').classList.remove('hide');
+        }
+      });
+    } catch(e) {
+      console.error('Firebase init error:', e);
+      document.getElementById('login-overlay').classList.add('hide');
+    }
+  }
+
+  // ===== SKIP LOGIN (hors ligne) =====
+  function skipLogin() {
+    document.getElementById('login-overlay').classList.add('hide');
+    updateSyncBadge('off');
+  }
+
+  // ===== ACCOUNT MENU =====
+  function toggleAccountMenu() {
+    const m = document.getElementById('accountMenu');
+    m.style.display = m.style.display === 'none' ? 'block' : 'none';
+    document.addEventListener('click', function closeMenu(e) {
+      if (!e.target.closest('#accountMenu') && !e.target.closest('.nav-account')) {
+        m.style.display = 'none';
+        document.removeEventListener('click', closeMenu);
+      }
+    });
+  }
+
+  // ===== FIREBASE INIT =====
+  function initFirebase(cfg) {
+    try {
+      if (fbApp) {
+        fbAuth.signOut();
+        fbApp.delete();
+      }
+      fbApp = firebase.initializeApp(cfg, 'bgfacture');
+      fbAuth = firebase.auth(fbApp);
+      fbDb = firebase.firestore(fbApp);
+      patronEmail = cfg.patronEmail || '';
+
+      fbAuth.onAuthStateChanged(user => {
+        if (user) {
+          currentUser = user;
+          isPatron = patronEmail && user.email.toLowerCase() === patronEmail.toLowerCase();
+          document.getElementById('login-overlay').classList.add('hide');
+          updateNavAccount(user);
+          updateSyncBadge('ok');
+          updateSettingsConnectedView(user);
+          loadFromFirebase();
+        } else {
+          currentUser = null;
+          isPatron = false;
+          updateSyncBadge('off');
+          updateNavAccount(null);
+          updateSettingsConnectedView(null);
+          if (fbConfig) document.getElementById('login-overlay').classList.remove('hide');
+        }
+      });
+      return true;
+    } catch (e) {
+      console.error('Firebase init error:', e);
+      showToast('❌ Erreur Firebase : ' + e.message, 'error');
+      return false;
+    }
+  }
+
+  // ===== SIGN IN =====
+  function signInGoogle() {
+    if (!fbAuth) {
+      showToast('⚠️ Configure Firebase dans Réglages d\'abord !', 'error');
+      document.getElementById('login-overlay').classList.add('hide');
+      showTab('settings', document.querySelector('.tab[data-tab="settings"]'));
+      return;
+    }
+    const provider = new firebase.auth.GoogleAuthProvider();
+    fbAuth.signInWithPopup(provider).catch(e => {
+      showToast('❌ Connexion échouée : ' + e.message, 'error');
+    });
+  }
+
+  // ===== SIGN OUT =====
+  function doSignOut() {
+    if (fbAuth) fbAuth.signOut();
+    document.getElementById('accountMenu').style.display = 'none';
+    document.getElementById('login-overlay').classList.remove('hide');
+    showToast('👋 Déconnecté avec succès', 'info');
+  }
+
+  // ===== SAVE FIREBASE CONFIG =====
+  function saveFirebaseConfig() {
+    const apiKey = document.getElementById('fb-apiKey').value.trim();
+    const authDomain = document.getElementById('fb-authDomain').value.trim();
+    const projectId = document.getElementById('fb-projectId').value.trim();
+    const appId = document.getElementById('fb-appId').value.trim();
+    const pEmail = document.getElementById('fb-patronEmail').value.trim();
+    if (!apiKey || !authDomain || !projectId || !appId) {
+      showToast('⚠️ Remplis tous les champs Firebase !', 'error'); return;
+    }
+    fbConfig = { apiKey, authDomain, projectId, appId, patronEmail: pEmail };
+    safeSet('bg_fb_config', JSON.stringify(fbConfig));
+    const ok = initFirebase(fbConfig);
+    if (ok) showToast('✅ Firebase configuré ! Connecte-toi avec Gmail.', 'success');
+  }
+
+  // ===== SYNC TO FIREBASE =====
+  async function syncToFirebase(invoice) {
+    if (!fbDb || !currentUser) return false;
+    try {
+      updateSyncBadge('ing');
+      await fbDb.collection('bg_invoices').doc(invoice.num + '_' + currentUser.uid).set({
+        ...invoice,
+        userId: currentUser.uid,
+        userEmail: currentUser.email,
+        userName: currentUser.displayName || currentUser.email,
+        syncedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      updateSyncBadge('ok');
+      return true;
+    } catch (e) {
+      console.error('Firestore sync error:', e);
+      updateSyncBadge('off');
+      showToast('⚠️ Sync cloud échoué, sauvegardé localement', 'error');
+      return false;
+    }
+  }
+
+  // ===== LOAD FROM FIREBASE =====
+  async function loadFromFirebase() {
+    if (!fbDb || !currentUser) return;
+    try {
+      updateSyncBadge('ing');
+      let query;
+      if (isPatron) {
+        query = fbDb.collection('bg_invoices').orderBy('syncedAt', 'desc').limit(200);
+      } else {
+        query = fbDb.collection('bg_invoices').where('userId', '==', currentUser.uid).orderBy('syncedAt', 'desc').limit(100);
+      }
+      const snap = await query.get();
+      const cloudInvoices = [];
+      const teamMembers = {};
+      snap.forEach(doc => {
+        const d = doc.data();
+        cloudInvoices.push(d);
+        if (d.userId && d.userName) teamMembers[d.userId] = d.userName;
+      });
+      if (cloudInvoices.length > 0) {
+        invHistory = cloudInvoices;
+        safeSet('bg_facture_history', JSON.stringify(invHistory));
+        // Vue patron : construire le filtre équipe
+        if (isPatron && Object.keys(teamMembers).length > 0) {
+          renderTeamFilter(teamMembers);
+        }
+        renderHistory();
+        updateSyncBadge('ok');
+        showToast('☁️ ' + cloudInvoices.length + ' facture(s) synchronisée(s) depuis le cloud', 'success');
+      } else {
+        updateSyncBadge('ok');
+      }
+    } catch (e) {
+      console.error('Firebase load error:', e);
+      updateSyncBadge('off');
+    }
+  }
+
+  function syncNow() {
+    document.getElementById('accountMenu').style.display = 'none';
+    if (!currentUser) { showToast('⚠️ Connecte-toi d\'abord !', 'error'); return; }
+    loadFromFirebase();
+  }
+
+  // ===== VUE ÉQUIPE (PATRON) =====
+  function renderTeamFilter(members) {
+    const wrap = document.getElementById('teamFilterWrap');
+    const filter = document.getElementById('teamFilter');
+    wrap.style.display = 'block';
+    let html = '<div class="team-chip active" onclick="filterTeam(\'all\',this)">👥 Toute l\'équipe</div>';
+    for (const [uid, name] of Object.entries(members)) {
+      html += `<div class="team-chip" onclick="filterTeam('${uid}',this)">${name}</div>`;
+    }
+    filter.innerHTML = html;
+  }
+
+  function filterTeam(uid, el) {
+    teamFilterUid = uid;
+    document.querySelectorAll('.team-chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    renderHistory();
+  }
+
+  // ===== UPDATE UI COMPTE =====
+  function updateNavAccount(user) {
+    const ph = document.getElementById('navAvatarPlaceholder');
+    const img = document.getElementById('navAvatarImg');
+    if (user && user.photoURL) {
+      img.src = user.photoURL; img.style.display = 'block'; ph.style.display = 'none';
+    } else {
+      img.style.display = 'none'; ph.style.display = 'flex';
+      ph.textContent = user ? (user.displayName || user.email || '')[0].toUpperCase() : '👤';
+    }
+    document.getElementById('menuUserName').textContent = user ? (user.displayName || '—') : '—';
+    document.getElementById('menuUserEmail').textContent = user ? user.email : '—';
+    const patronBadge = document.getElementById('menuPatronBadge');
+    if (isPatron) patronBadge.style.display = 'inline-block'; else patronBadge.style.display = 'none';
+  }
+
+  function updateSettingsConnectedView(user) {
+    const cv = document.getElementById('firebase-connected-view');
+    const sv = document.getElementById('firebase-setup-view');
+    if (user) {
+      cv.style.display = 'block'; sv.style.display = 'none';
+      document.getElementById('cfg-name').textContent = user.displayName || user.email;
+      document.getElementById('cfg-email').textContent = user.email;
+      const av = document.getElementById('cfg-avatar');
+      if (user.photoURL) av.src = user.photoURL;
+      const pb = document.getElementById('cfg-patron-badge');
+      if (isPatron) pb.style.display = 'inline-block'; else pb.style.display = 'none';
+    } else {
+      cv.style.display = 'none'; sv.style.display = 'block';
+      // Préremplir si config existante
+      if (fbConfig) {
+        document.getElementById('fb-apiKey').value = fbConfig.apiKey || '';
+        document.getElementById('fb-authDomain').value = fbConfig.authDomain || '';
+        document.getElementById('fb-projectId').value = fbConfig.projectId || '';
+        document.getElementById('fb-appId').value = fbConfig.appId || '';
+        document.getElementById('fb-patronEmail').value = fbConfig.patronEmail || '';
+      }
+    }
+  }
+
+  function updateSyncBadge(state) {
+    const badge = document.getElementById('syncBadge');
+    badge.className = 'sync-badge sync-' + (state === 'ok' ? 'ok' : state === 'ing' ? 'ing' : 'off');
+    badge.textContent = state === 'ok' ? '☁️ Synchronisé' : state === 'ing' ? '⏳ Sync...' : '🔌 Hors ligne';
+  }
+
+  // ===== TOAST (remplace alert(), fiable dans tous les contextes PWA/webview) =====
+  let toastTimer = null;
+  function showToast(msg, type) {
+    const el = document.getElementById('toastMsg');
+    el.textContent = msg;
+    el.className = 'toast-msg show toast-' + (type || 'info');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { el.classList.remove('show'); }, 3200);
+  }
+
+  // ===== STOCKAGE SÉCURISÉ (évite tout échec silencieux) =====
+  function safeSet(key, value) {
+    try {
+      localStorage.setItem(key, value);
+      return true;
+    } catch (e) {
+      console.error('Erreur de sauvegarde localStorage:', e);
+      showToast('⚠️ Erreur de sauvegarde : mémoire pleine ou navigation privée. (' + e.message + ')', 'error');
+      return false;
+    }
+  }
+  function safeGet(key, fallback) {
+    try {
+      return localStorage.getItem(key) || fallback;
+    } catch (e) {
+      console.error('Erreur de lecture localStorage:', e);
+      return fallback;
+    }
+  }
+
+  function selectTemplate(n) {
+    selectedTemplate = n;
+    localStorage.setItem('bg_facture_tpl', String(n));
+    document.querySelectorAll('.tpl-card').forEach(function(c){ c.classList.remove('selected'); });
+    var card = document.getElementById('tpl-' + n);
+    if(card) card.classList.add('selected');
+    // Régénérer aperçu si facture active
+    if(currentInvoice) renderPreview(currentInvoice);
+  }
+
+  // ===== INIT =====
+  function init() {
+    // Init template selection
+    document.querySelectorAll('.tpl-card').forEach(function(c){ c.classList.remove('selected'); });
+    var card = document.getElementById('tpl-' + selectedTemplate);
+    if(card) card.classList.add('selected');
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('invDate').value = today;
+
+    if (settings.bizName) document.getElementById('bizName').value = settings.bizName;
+    if (settings.bizPhone) document.getElementById('bizPhone').value = settings.bizPhone;
+    if (settings.bizAddr) document.getElementById('bizAddr').value = settings.bizAddr;
+    if (settings.bizEmail) document.getElementById('bizEmail').value = settings.bizEmail;
+    if (settings.bizSlogan) document.getElementById('bizSlogan').value = settings.bizSlogan;
+    if (settings.invPrefix) document.getElementById('invPrefix').value = settings.invPrefix;
+    if (settings.bizThanks) document.getElementById('bizThanks').value = settings.bizThanks;
+    if (settings.bizGarantie) document.getElementById('bizGarantie').value = settings.bizGarantie;
+    if (settings.bizRemboursement) document.getElementById('bizRemboursement').value = settings.bizRemboursement;
+    if (settings.logoBase64) {
+      document.getElementById('logoPreviewImg').src = settings.logoBase64;
+      document.getElementById('logoPreviewWrap').style.display = 'block';
+    }
+
+    const prefix = settings.invPrefix || 'FAC-';
+    const num = String(invHistory.length + 1).padStart(3, '0');
+    document.getElementById('invNum').value = prefix + num;
+
+    // ===== FIREBASE AUTO BOOT =====
+    autoInitFirebase();
+
+    addProduct();
+    renderHistory();
+    renderCatalogList();
+  }
+
+  // ===== TABS =====
+  function showTab(name, el) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('tab-' + name).classList.add('active');
+    if (el) {
+      el.classList.add('active');
+    } else {
+      const t = document.querySelector('.tab[data-tab="' + name + '"]');
+      if (t) t.classList.add('active');
+    }
+  }
+
+  // ===== PRODUCTS =====
+  function addProduct() {
+    const id = Date.now();
+    products.push({ id, name: '', qty: 1, price: '', cost: 0 });
+    renderProducts();
+  }
+
+  function removeProduct(id) {
+    if (products.length === 1) return;
+    products = products.filter(p => p.id !== id);
+    renderProducts();
+  }
+
+  function updateProduct(id, field, val) {
+    const p = products.find(p => p.id === id);
+    if (p) {
+      p[field] = field === 'qty' || field === 'price' ? parseFloat(val) || 0 : val;
+      recalc();
+      const sub = document.getElementById('sub_' + id);
+      if (sub) {
+        const total = (p.qty || 0) * (p.price || 0);
+        sub.textContent = total > 0 ? '= ' + formatF(total) : '';
+      }
+      const profitEl = document.getElementById('profit_' + id);
+      if (profitEl && p.cost > 0) {
+        const profit = (p.price - p.cost) * (p.qty || 1);
+        profitEl.textContent = '💰 Bénéfice : ' + (profit >= 0 ? '+' : '') + formatF(profit) + ' (achat ' + formatF(p.cost) + ')';
+      }
+    }
+  }
+
+  function renderProducts() {
+    const container = document.getElementById('productsList');
+    container.innerHTML = '';
+    const catalogOptions = supplierCatalog.map((c, idx) =>
+      `<option value="${idx}">${c.name} — ${formatF(c.sell)}</option>`
+    ).join('');
+    products.forEach(p => {
+      const div = document.createElement('div');
+      div.className = 'product-item';
+      div.id = 'prod_' + p.id;
+      const catalogPicker = supplierCatalog.length > 0 ? `
+        <select class="catalog-select" onchange="pickFromCatalog(${p.id}, this.value)">
+          <option value="">📋 Choisir depuis le catalogue fournisseur...</option>
+          ${catalogOptions}
+        </select>
+      ` : `<div class="catalog-hint">💡 Va dans l'onglet "Fournisseurs" pour créer ton catalogue et sélectionner les téléphones rapidement.</div>`;
+      div.innerHTML = `
+        <button class="del" onclick="removeProduct(${p.id})">×</button>
+        ${catalogPicker}
+        <div class="field" style="margin-right:36px">
+          <label>Désignation</label>
+          <input type="text" placeholder="Ex: iPhone 14 Pro" value="${p.name}" oninput="updateProduct(${p.id},'name',this.value)"/>
+        </div>
+        <div class="row2">
+          <div class="field">
+            <label>Quantité</label>
+            <input type="number" value="${p.qty}" min="1" oninput="updateProduct(${p.id},'qty',this.value)"/>
+          </div>
+          <div class="field">
+            <label>Prix Unitaire (F)</label>
+            <input type="number" placeholder="0" value="${p.price || ''}" oninput="updateProduct(${p.id},'price',this.value)"/>
+          </div>
+        </div>
+        <div class="product-subtotal" id="sub_${p.id}">${p.price ? '= ' + formatF(p.qty * p.price) : ''}</div>
+        ${p.cost > 0 ? `<div class="profit-line" id="profit_${p.id}">💰 Bénéfice : +${formatF((p.price - p.cost) * (p.qty || 1))} (achat ${formatF(p.cost)})</div>` : ''}
+      `;
+      container.appendChild(div);
+    });
+    recalc();
+  }
+
+  // ===== CALC =====
+  function pickFromCatalog(id, idx) {
+    if (idx === '') return;
+    const item = supplierCatalog[parseInt(idx)];
+    if (!item) return;
+    const p = products.find(p => p.id === id);
+    if (!p) return;
+    p.name = item.name;
+    p.price = item.sell;
+    p.cost = item.cost;
+    renderProducts();
+  }
+
+  function recalc() {
+    const subtotal = products.reduce((acc, p) => acc + (p.qty || 0) * (p.price || 0), 0);
+    const tvaRate = parseFloat(document.getElementById('tvaRate').value) || 0;
+    const tva = Math.round(subtotal * tvaRate / 100);
+    const total = subtotal + tva;
+    document.getElementById('subtotalVal').textContent = formatF(subtotal);
+    document.getElementById('tvaLabel').textContent = tvaRate;
+    document.getElementById('tvaVal').textContent = formatF(tva);
+    document.getElementById('totalVal').textContent = formatF(total);
+  }
+
+  function formatF(n) {
+    return (n || 0).toLocaleString('fr-FR') + ' F';
+  }
+
+  // ===== FOURNISSEURS / CATALOGUE =====
+  function setSupplierMargin(val) {
+    supplierMargin = parseInt(val);
+    document.getElementById('margSlider').value = supplierMargin;
+    document.getElementById('margBadge').textContent = supplierMargin + '%';
+    document.querySelectorAll('.marg-chip').forEach(c => c.classList.remove('active'));
+    const match = Array.from(document.querySelectorAll('.marg-chip')).find(c => c.textContent.trim().startsWith(supplierMargin + '%'));
+    if (match) match.classList.add('active');
+    if (parsedSupplierList.length > 0) renderSupplierResults();
+  }
+
+  function getSupplierPrice(line) {
+    const low = line.toLowerCase();
+    let m = low.match(/(\d+)\s*mill(?:e|s|ions?)?/);
+    if (m) {
+      const n = parseInt(m[1]);
+      if (n > 0 && n < 10000) return { val: n * 1000, pos: low.indexOf(m[0]) };
+    }
+    m = line.match(/(\d{1,3}(?:[\s.]\d{3})+)/);
+    if (m) {
+      const v = parseInt(m[1].replace(/[\s.]/g, ''));
+      if (v >= 1000) return { val: v, pos: line.indexOf(m[0]) };
+    }
+    m = line.match(/(\d{5,})/);
+    if (m) {
+      const v2 = parseInt(m[1]);
+      if (v2 >= 1000) return { val: v2, pos: line.indexOf(m[0]) };
+    }
+    m = line.match(/(?:à|a|:|=|-|\/|—)\s*(\d{3,4})\s*(?:F|FCFA|CFA)?/i);
+    if (m) {
+      const v3 = parseInt(m[1]);
+      if (v3 >= 100) return { val: v3 < 10000 ? v3 * 1000 : v3, pos: line.indexOf(m[0]) };
+    }
+    return null;
+  }
+
+  function getSupplierName(line, pricePos) {
+    const seps = [' à ', ' a ', ' : ', ': ', ' = ', '= ', ' - ', '- ', ' / ', '/ ', ' — ', '—'];
+    let best = -1;
+    for (const sep of seps) {
+      const idx = line.indexOf(sep);
+      if (idx > 0 && idx < pricePos) { best = idx; break; }
+    }
+    let name;
+    if (best > 0) {
+      name = line.substring(0, best).trim();
+    } else {
+      name = line.substring(0, pricePos).trim();
+      name = name.replace(/[:\-=\/àa\s]+$/, '').trim();
+    }
+    return name;
+  }
+
+  function parseSupplierList(text) {
+    const lines = text.split('\n');
+    const out = [];
+    for (let line of lines) {
+      line = line.trim();
+      if (!line || line.length < 3) continue;
+      line = line.replace(/^[-•▪*#>]+\s*/, '').trim();
+      if (!line) continue;
+      const pr = getSupplierPrice(line);
+      if (!pr) continue;
+      const nm = getSupplierName(line, pr.pos);
+      if (!nm || nm.length < 2) continue;
+      out.push({ name: nm, price: pr.val });
+    }
+    return out;
+  }
+
+  function analyzeSupplierList() {
+    const text = document.getElementById('supplierText').value.trim();
+    const errEl = document.getElementById('supplierError');
+    errEl.style.display = 'none';
+    if (!text) { errEl.textContent = '⚠️ Colle la liste du fournisseur d\'abord.'; errEl.style.display = 'block'; return; }
+    const res = parseSupplierList(text);
+    if (res.length === 0) {
+      errEl.textContent = '⚠️ Aucun produit détecté. Exemple : "iPhone 14 à 300mille" ou "Samsung S24 : 250 000 F"';
+      errEl.style.display = 'block';
+      return;
+    }
+    parsedSupplierList = res;
+    renderSupplierResults();
+  }
+
+  function renderSupplierResults() {
+    const wrap = document.getElementById('supplierResultsWrap');
+    wrap.style.display = 'block';
+    document.getElementById('supCount').textContent = parsedSupplierList.length;
+    const list = document.getElementById('supplierResultsList');
+    list.innerHTML = parsedSupplierList.map(p => {
+      const sell = Math.round(p.price * (1 + supplierMargin / 100));
+      const profit = sell - p.price;
+      return `<div class="sup-row">
+        <div class="sup-name">${p.name}</div>
+        <div class="sup-cost">${formatF(p.price)}</div>
+        <div class="sup-sell">${formatF(sell)}</div>
+        <div class="sup-profit">+${formatF(profit)}</div>
+      </div>`;
+    }).join('');
+  }
+
+  function saveCatalog() {
+    if (parsedSupplierList.length === 0) return;
+    supplierCatalog = parsedSupplierList.map(p => ({
+      name: p.name,
+      cost: p.price,
+      sell: Math.round(p.price * (1 + supplierMargin / 100))
+    }));
+    localStorage.setItem('bg_supplier_catalog', JSON.stringify(supplierCatalog));
+    renderCatalogList();
+    renderProducts();
+    alert('✅ Catalogue enregistré ! ' + supplierCatalog.length + ' produits disponibles dans "Créer une facture".');
+  }
+
+  function renderCatalogList() {
+    const container = document.getElementById('catalogList');
+    const empty = document.getElementById('catalogEmpty');
+    const clearBtn = document.getElementById('clearCatalogBtn');
+    if (supplierCatalog.length === 0) {
+      empty.style.display = 'block';
+      container.innerHTML = '';
+      clearBtn.style.display = 'none';
+      return;
+    }
+    empty.style.display = 'none';
+    clearBtn.style.display = 'block';
+    container.innerHTML = supplierCatalog.map((c, i) => `
+      <div class="cat-item">
+        <div>
+          <div class="cat-item-name">${c.name}</div>
+          <div class="cat-item-prices">Achat ${formatF(c.cost)} → Vente ${formatF(c.sell)} <span style="color:#4ade80">(+${formatF(c.sell - c.cost)})</span></div>
+        </div>
+        <button class="cat-del" onclick="deleteCatalogItem(${i})">×</button>
+      </div>
+    `).join('');
+  }
+
+  function deleteCatalogItem(idx) {
+    supplierCatalog.splice(idx, 1);
+    localStorage.setItem('bg_supplier_catalog', JSON.stringify(supplierCatalog));
+    renderCatalogList();
+    renderProducts();
+  }
+
+  function clearCatalog() {
+    if (!confirm('Vider tout le catalogue ?')) return;
+    supplierCatalog = [];
+    localStorage.setItem('bg_supplier_catalog', JSON.stringify(supplierCatalog));
+    renderCatalogList();
+    renderProducts();
+  }
+
+  // ===== GENERATE =====
+  function generateInvoice() {
+    const clientName = document.getElementById('clientName').value.trim();
+    if (!clientName) { alert('Veuillez entrer le nom du client !'); return; }
+    const hasProducts = products.some(p => p.name && p.price > 0);
+    if (!hasProducts) { alert('Veuillez ajouter au moins un produit !'); return; }
+
+    const biz = {
+      name: document.getElementById('bizName').value || 'BG Facture',
+      phone: document.getElementById('bizPhone').value,
+      addr: document.getElementById('bizAddr').value,
+      email: document.getElementById('bizEmail').value,
+      slogan: document.getElementById('bizSlogan').value,
+      logo: settings.logoBase64 || '',
+      thanks: document.getElementById('bizThanks').value,
+      garantie: document.getElementById('bizGarantie').value,
+      remboursement: document.getElementById('bizRemboursement').value,
+    };
+
+    const subtotal = products.reduce((acc, p) => acc + (p.qty || 0) * (p.price || 0), 0);
+    const tvaRate = parseFloat(document.getElementById('tvaRate').value) || 0;
+    const tva = Math.round(subtotal * tvaRate / 100);
+    const total = subtotal + tva;
+
+    const totalCost = products.reduce((acc, p) => acc + (p.qty || 0) * (p.cost || 0), 0);
+    const hasCost = products.some(p => (p.cost || 0) > 0 && p.name && p.price > 0);
+    const profit = hasCost ? (subtotal - totalCost) : null;
+
+    currentInvoice = {
+      num: document.getElementById('invNum').value,
+      date: document.getElementById('invDate').value,
+      status: document.getElementById('invStatus').value,
+      client: {
+        name: clientName,
+        phone: document.getElementById('clientPhone').value,
+        addr: document.getElementById('clientAddr').value,
+      },
+      products: [...products.filter(p => p.name && p.price > 0)],
+      subtotal, tvaRate, tva, total,
+      totalCost, profit,
+      notes: document.getElementById('invNotes').value,
+      sign: document.getElementById('invSign').value,
+      garantiePeriod: document.getElementById('invGarantie').value,
+      biz,
+    };
+
+    renderPreview(currentInvoice);
+    showTab('preview');
+  }
+
+  function renderPreview(inv) {
+    document.getElementById('previewEmpty').style.display = 'none';
+    document.getElementById('previewContent').style.display = 'block';
+    const templates = [null, tpl1, tpl2, tpl3, tpl4, tpl5, tpl6];
+    const fn = templates[selectedTemplate] || tpl1;
+    document.getElementById('previewArea').innerHTML = fn(inv);
+  }
+
+  // Helpers communs
+  function statusColor(s){ return s==='Payée'?'#22c55e':s==='En attente'?'#f59e0b':'#ef4444'; }
+  function fDate(d){ return new Date(d).toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'}); }
+  function prodRows(inv, tdStyle){
+    return inv.products.map(p=>`<tr>
+      <td style="${tdStyle}">${p.name}</td>
+      <td style="${tdStyle}text-align:center">${p.qty}</td>
+      <td style="${tdStyle}text-align:right">${formatF(p.price)}</td>
+      <td style="${tdStyle}text-align:right;font-weight:700">${formatF(p.qty*p.price)}</td>
+    </tr>`).join('');
+  }
+  function footerBlocks(inv){
+    if(!(inv.garantiePeriod||inv.biz.garantie||inv.biz.remboursement)) return '';
+    return `<div style="margin-top:14px;padding-top:12px;border-top:1px solid #e5e5e5;">
+      ${inv.garantiePeriod&&inv.garantiePeriod!=='Aucune garantie'?`<div style="margin-bottom:8px;padding:8px 10px;background:#f9f9f9;border-left:3px solid #c9a84c;border-radius:4px;"><div style="font-size:9px;font-weight:700;color:#888;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px;">Garantie</div><span style="display:inline-block;background:#f0fdf4;border:1px solid #86efac;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;color:#15803d;">Garanti ${inv.garantiePeriod}</span>${inv.biz.garantie?` <span style="font-size:11px;color:#555;">${inv.biz.garantie}</span>`:''}</div>`:''}
+      ${inv.biz.remboursement?`<div style="margin-bottom:8px;padding:8px 10px;background:#f9f9f9;border-left:3px solid #c9a84c;border-radius:4px;"><div style="font-size:9px;font-weight:700;color:#888;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px;">Politique de remboursement</div><div style="font-size:11px;color:#555;">${inv.biz.remboursement}</div></div>`:''}
+    </div>`;
+  }
+  function thankYou(inv, color){
+    if(!inv.biz.thanks) return '';
+    return `<div style="text-align:center;margin-top:14px;padding:10px;background:linear-gradient(135deg,#fffbf0,#fff8e0);border-radius:8px;border:1px solid rgba(201,168,76,.3);">
+      <div style="font-size:12px;font-weight:700;color:${color||'#c9a84c'}">${inv.biz.thanks}</div>
+      <div style="font-size:10px;color:#888;margin-top:2px;">— ${inv.biz.name}</div>
+    </div>`;
+  }
+
+  // ===== TEMPLATE 1 : Classique Doré =====
+  function tpl1(inv) {
+    const sc = statusColor(inv.status);
+    return `<div style="background:#fff;font-family:'DM Sans',sans-serif;padding:20px;border-radius:12px;border:1px solid #f0e8d0;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:16px;border-bottom:2px solid #f0e8d0;margin-bottom:16px;">
+        <div>
+          ${inv.biz.logo?`<img src="${inv.biz.logo}" style="max-height:65px;max-width:130px;object-fit:contain;display:block;margin-bottom:5px;"/>`:''}
+          <div style="font-family:'Playfair Display',serif;font-size:${inv.biz.logo?'15':'22'}px;font-weight:800;background:linear-gradient(90deg,#c9a84c,#f0d080);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">${inv.biz.name}</div>
+          ${inv.biz.slogan?`<div style="font-size:10px;color:#888;margin-top:2px;">${inv.biz.slogan}</div>`:''}
+          ${inv.biz.phone?`<div style="font-size:10px;color:#555;margin-top:5px;">📞 ${inv.biz.phone}</div>`:''}
+          ${inv.biz.addr?`<div style="font-size:10px;color:#555;">📍 ${inv.biz.addr}</div>`:''}
+          ${inv.biz.email?`<div style="font-size:10px;color:#555;">✉️ ${inv.biz.email}</div>`:''}
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:22px;font-weight:900;color:#1a1a2e;letter-spacing:2px;">FACTURE</div>
+          <div style="font-size:14px;font-weight:700;color:#c9a84c;">${inv.num}</div>
+          <div style="font-size:11px;color:#666;margin-top:3px;">${fDate(inv.date)}</div>
+          <div style="margin-top:6px;background:${sc};color:#fff;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;display:inline-block;">${inv.status}</div>
+        </div>
+      </div>
+      <div style="margin-bottom:14px;padding:10px 12px;background:#fffbf2;border-radius:8px;border-left:3px solid #c9a84c;">
+        <div style="font-size:9px;font-weight:700;color:#888;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Facturé à</div>
+        <div style="font-size:14px;font-weight:700;color:#1a1a2e;">${inv.client.name}</div>
+        ${inv.client.phone?`<div style="font-size:11px;color:#555;margin-top:2px;">📞 ${inv.client.phone}</div>`:''}
+        ${inv.client.addr?`<div style="font-size:11px;color:#555;">📍 ${inv.client.addr}</div>`:''}
+      </div>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:14px;">
+        <thead><tr style="background:linear-gradient(90deg,#c9a84c,#f0d080);">
+          <th style="padding:8px;text-align:left;font-size:10px;color:#0d0d1a;font-weight:700;">Désignation</th>
+          <th style="padding:8px;text-align:center;font-size:10px;color:#0d0d1a;font-weight:700;">Qté</th>
+          <th style="padding:8px;text-align:right;font-size:10px;color:#0d0d1a;font-weight:700;">P.U.</th>
+          <th style="padding:8px;text-align:right;font-size:10px;color:#0d0d1a;font-weight:700;">Total</th>
+        </tr></thead>
+        <tbody>${prodRows(inv,'padding:7px 8px;font-size:12px;border-bottom:1px solid #f0f0f0;')}</tbody>
+      </table>
+      <div style="margin-left:auto;max-width:220px;">
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:#555;padding:4px 0;">
+          <span>Sous-total</span><span>${formatF(inv.subtotal)}</span>
+        </div>
+        ${inv.tvaRate>0?`<div style="display:flex;justify-content:space-between;font-size:12px;color:#555;padding:4px 0;"><span>TVA (${inv.tvaRate}%)</span><span>${formatF(inv.tva)}</span></div>`:''}
+        <div style="display:flex;justify-content:space-between;background:linear-gradient(90deg,#c9a84c,#f0d080);padding:10px 12px;border-radius:8px;margin-top:6px;">
+          <span style="font-size:13px;font-weight:800;color:#0d0d1a;">TOTAL</span>
+          <span style="font-size:16px;font-weight:900;color:#0d0d1a;">${formatF(inv.total)}</span>
+        </div>
+      </div>
+      ${inv.notes?`<div style="margin-top:14px;padding:10px;background:#f9f9f9;border-radius:6px;font-size:11px;color:#555;font-style:italic;">${inv.notes}</div>`:''}
+      ${inv.sign?`<div style="margin-top:20px;"><div style="width:140px;height:1px;background:#ccc;margin-top:35px;"></div><div style="font-size:11px;color:#888;margin-top:4px;">${inv.sign}</div></div>`:''}
+      ${footerBlocks(inv)}
+      ${thankYou(inv,'#c9a84c')}
+    </div>`;
+  }
+
+  // ===== TEMPLATE 2 : Sombre Premium =====
+  function tpl2(inv) {
+    const sc = statusColor(inv.status);
+    return `<div style="background:#0d0d1a;font-family:'DM Sans',sans-serif;padding:20px;border-radius:12px;border:1px solid rgba(201,168,76,.3);">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:16px;border-bottom:1px solid rgba(201,168,76,.25);margin-bottom:16px;">
+        <div>
+          ${inv.biz.logo?`<img src="${inv.biz.logo}" style="max-height:65px;max-width:130px;object-fit:contain;display:block;margin-bottom:5px;background:#fff;border-radius:6px;padding:3px;"/>`:''}
+          <div style="font-family:'Playfair Display',serif;font-size:${inv.biz.logo?'15':'22'}px;font-weight:800;background:linear-gradient(90deg,#c9a84c,#f0d080);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">${inv.biz.name}</div>
+          ${inv.biz.slogan?`<div style="font-size:10px;color:#888;margin-top:2px;">${inv.biz.slogan}</div>`:''}
+          ${inv.biz.phone?`<div style="font-size:10px;color:#aaa;margin-top:5px;">📞 ${inv.biz.phone}</div>`:''}
+          ${inv.biz.addr?`<div style="font-size:10px;color:#aaa;">📍 ${inv.biz.addr}</div>`:''}
+          ${inv.biz.email?`<div style="font-size:10px;color:#aaa;">✉️ ${inv.biz.email}</div>`:''}
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:22px;font-weight:900;background:linear-gradient(90deg,#c9a84c,#f0d080);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:2px;">FACTURE</div>
+          <div style="font-size:14px;font-weight:700;color:#f0d080;">${inv.num}</div>
+          <div style="font-size:11px;color:#888;margin-top:3px;">${fDate(inv.date)}</div>
+          <div style="margin-top:6px;background:${sc};color:#fff;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;display:inline-block;">${inv.status}</div>
+        </div>
+      </div>
+      <div style="margin-bottom:14px;padding:10px 12px;background:rgba(201,168,76,.08);border-radius:8px;border-left:3px solid #c9a84c;">
+        <div style="font-size:9px;font-weight:700;color:#c9a84c;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Facturé à</div>
+        <div style="font-size:14px;font-weight:700;color:#e8e0d0;">${inv.client.name}</div>
+        ${inv.client.phone?`<div style="font-size:11px;color:#aaa;margin-top:2px;">📞 ${inv.client.phone}</div>`:''}
+        ${inv.client.addr?`<div style="font-size:11px;color:#aaa;">📍 ${inv.client.addr}</div>`:''}
+      </div>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:14px;">
+        <thead><tr style="background:linear-gradient(90deg,#c9a84c,#f0d080);">
+          <th style="padding:8px;text-align:left;font-size:10px;color:#0d0d1a;font-weight:700;">Désignation</th>
+          <th style="padding:8px;text-align:center;font-size:10px;color:#0d0d1a;font-weight:700;">Qté</th>
+          <th style="padding:8px;text-align:right;font-size:10px;color:#0d0d1a;font-weight:700;">P.U.</th>
+          <th style="padding:8px;text-align:right;font-size:10px;color:#0d0d1a;font-weight:700;">Total</th>
+        </tr></thead>
+        <tbody>${prodRows(inv,'padding:7px 8px;font-size:12px;color:#e8e0d0;border-bottom:1px solid rgba(255,255,255,.06);')}</tbody>
+      </table>
+      <div style="margin-left:auto;max-width:220px;">
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:#aaa;padding:4px 0;"><span>Sous-total</span><span>${formatF(inv.subtotal)}</span></div>
+        ${inv.tvaRate>0?`<div style="display:flex;justify-content:space-between;font-size:12px;color:#aaa;padding:4px 0;"><span>TVA (${inv.tvaRate}%)</span><span>${formatF(inv.tva)}</span></div>`:''}
+        <div style="display:flex;justify-content:space-between;background:linear-gradient(90deg,#c9a84c,#f0d080);padding:10px 12px;border-radius:8px;margin-top:6px;">
+          <span style="font-size:13px;font-weight:800;color:#0d0d1a;">TOTAL</span>
+          <span style="font-size:16px;font-weight:900;color:#0d0d1a;">${formatF(inv.total)}</span>
+        </div>
+      </div>
+      ${inv.notes?`<div style="margin-top:14px;padding:10px;background:rgba(255,255,255,.05);border-radius:6px;font-size:11px;color:#aaa;font-style:italic;">${inv.notes}</div>`:''}
+      ${inv.sign?`<div style="margin-top:20px;"><div style="width:140px;height:1px;background:rgba(201,168,76,.4);margin-top:35px;"></div><div style="font-size:11px;color:#888;margin-top:4px;">${inv.sign}</div></div>`:''}
+      ${inv.biz.thanks?`<div style="text-align:center;margin-top:14px;padding:10px;background:rgba(201,168,76,.08);border-radius:8px;border:1px solid rgba(201,168,76,.25);"><div style="font-size:12px;font-weight:700;color:#f0d080;">${inv.biz.thanks}</div><div style="font-size:10px;color:#888;margin-top:2px;">— ${inv.biz.name}</div></div>`:''}
+    </div>`;
+  }
+
+  // ===== TEMPLATE 3 : Moderne Bleu =====
+  function tpl3(inv) {
+    const sc = statusColor(inv.status);
+    return `<div style="background:#fff;font-family:'DM Sans',sans-serif;border-radius:12px;overflow:hidden;border:1px solid #dbeafe;">
+      <div style="background:linear-gradient(135deg,#1d4ed8,#3b82f6);padding:18px 20px;display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          ${inv.biz.logo?`<img src="${inv.biz.logo}" style="max-height:55px;max-width:110px;object-fit:contain;display:block;margin-bottom:4px;background:#fff;border-radius:6px;padding:3px;"/>`:''}
+          <div style="font-size:${inv.biz.logo?'14':'20'}px;font-weight:800;color:#fff;">${inv.biz.name}</div>
+          ${inv.biz.slogan?`<div style="font-size:10px;color:rgba(255,255,255,.7);margin-top:1px;">${inv.biz.slogan}</div>`:''}
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:20px;font-weight:900;color:#fff;letter-spacing:2px;">FACTURE</div>
+          <div style="font-size:12px;font-weight:700;color:#bfdbfe;">${inv.num}</div>
+          <div style="font-size:10px;color:rgba(255,255,255,.7);margin-top:2px;">${fDate(inv.date)}</div>
+        </div>
+      </div>
+      <div style="padding:16px 20px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;">
+          <div>
+            <div style="font-size:9px;font-weight:700;color:#1d4ed8;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Coordonnées</div>
+            ${inv.biz.phone?`<div style="font-size:10px;color:#555;">📞 ${inv.biz.phone}</div>`:''}
+            ${inv.biz.addr?`<div style="font-size:10px;color:#555;">📍 ${inv.biz.addr}</div>`:''}
+            ${inv.biz.email?`<div style="font-size:10px;color:#555;">✉️ ${inv.biz.email}</div>`:''}
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:9px;font-weight:700;color:#1d4ed8;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Facturé à</div>
+            <div style="font-size:14px;font-weight:700;color:#1e3a8a;">${inv.client.name}</div>
+            ${inv.client.phone?`<div style="font-size:10px;color:#555;">📞 ${inv.client.phone}</div>`:''}
+            ${inv.client.addr?`<div style="font-size:10px;color:#555;">📍 ${inv.client.addr}</div>`:''}
+          </div>
+        </div>
+        <div style="display:inline-block;background:${sc};color:#fff;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;margin-bottom:12px;">${inv.status}</div>
+        <table style="width:100%;border-collapse:collapse;margin-bottom:14px;">
+          <thead><tr style="background:#eff6ff;">
+            <th style="padding:8px;text-align:left;font-size:10px;color:#1d4ed8;font-weight:700;border-bottom:2px solid #1d4ed8;">Désignation</th>
+            <th style="padding:8px;text-align:center;font-size:10px;color:#1d4ed8;font-weight:700;border-bottom:2px solid #1d4ed8;">Qté</th>
+            <th style="padding:8px;text-align:right;font-size:10px;color:#1d4ed8;font-weight:700;border-bottom:2px solid #1d4ed8;">P.U.</th>
+            <th style="padding:8px;text-align:right;font-size:10px;color:#1d4ed8;font-weight:700;border-bottom:2px solid #1d4ed8;">Total</th>
+          </tr></thead>
+          <tbody>${prodRows(inv,'padding:7px 8px;font-size:12px;color:#333;border-bottom:1px solid #eff6ff;')}</tbody>
+        </table>
+        <div style="margin-left:auto;max-width:220px;">
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:#555;padding:4px 0;"><span>Sous-total</span><span>${formatF(inv.subtotal)}</span></div>
+          ${inv.tvaRate>0?`<div style="display:flex;justify-content:space-between;font-size:12px;color:#555;padding:4px 0;"><span>TVA (${inv.tvaRate}%)</span><span>${formatF(inv.tva)}</span></div>`:''}
+          <div style="display:flex;justify-content:space-between;background:linear-gradient(90deg,#1d4ed8,#3b82f6);padding:10px 12px;border-radius:8px;margin-top:6px;">
+            <span style="font-size:13px;font-weight:800;color:#fff;">TOTAL</span>
+            <span style="font-size:16px;font-weight:900;color:#fff;">${formatF(inv.total)}</span>
+          </div>
+        </div>
+        ${inv.notes?`<div style="margin-top:14px;padding:10px;background:#eff6ff;border-radius:6px;font-size:11px;color:#555;font-style:italic;">${inv.notes}</div>`:''}
+        ${inv.sign?`<div style="margin-top:20px;"><div style="width:140px;height:1px;background:#ccc;margin-top:35px;"></div><div style="font-size:11px;color:#888;margin-top:4px;">${inv.sign}</div></div>`:''}
+        ${footerBlocks(inv)}${thankYou(inv,'#1d4ed8')}
+      </div>
+    </div>`;
+  }
+
+  // ===== TEMPLATE 4 : Minimaliste =====
+  function tpl4(inv) {
+    const sc = statusColor(inv.status);
+    return `<div style="background:#fff;font-family:'DM Sans',sans-serif;padding:24px;border-radius:4px;border:1px solid #e5e5e5;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;">
+        <div>
+          ${inv.biz.logo?`<img src="${inv.biz.logo}" style="max-height:60px;max-width:120px;object-fit:contain;display:block;margin-bottom:6px;"/>`:''}
+          <div style="font-size:${inv.biz.logo?'14':'24'}px;font-weight:900;color:#111;letter-spacing:-0.5px;">${inv.biz.name}</div>
+          ${inv.biz.slogan?`<div style="font-size:10px;color:#888;margin-top:1px;">${inv.biz.slogan}</div>`:''}
+          ${inv.biz.phone?`<div style="font-size:10px;color:#555;margin-top:5px;">${inv.biz.phone}</div>`:''}
+          ${inv.biz.addr?`<div style="font-size:10px;color:#555;">${inv.biz.addr}</div>`:''}
+          ${inv.biz.email?`<div style="font-size:10px;color:#555;">${inv.biz.email}</div>`:''}
+        </div>
+        <div style="text-align:right;border-left:4px solid #111;padding-left:14px;">
+          <div style="font-size:26px;font-weight:900;color:#111;letter-spacing:3px;">FACTURE</div>
+          <div style="font-size:13px;font-weight:700;color:#111;margin-top:4px;">${inv.num}</div>
+          <div style="font-size:11px;color:#555;margin-top:3px;">${fDate(inv.date)}</div>
+          <div style="margin-top:6px;border:2px solid ${sc};color:${sc};font-size:10px;font-weight:700;padding:3px 10px;border-radius:4px;display:inline-block;">${inv.status}</div>
+        </div>
+      </div>
+      <div style="border-bottom:2px solid #111;border-top:1px solid #e5e5e5;padding:12px 0;margin-bottom:16px;">
+        <div style="font-size:9px;font-weight:700;color:#888;letter-spacing:2px;text-transform:uppercase;margin-bottom:5px;">Facturé à</div>
+        <div style="font-size:15px;font-weight:700;color:#111;">${inv.client.name}</div>
+        ${inv.client.phone?`<div style="font-size:11px;color:#555;margin-top:2px;">${inv.client.phone}</div>`:''}
+        ${inv.client.addr?`<div style="font-size:11px;color:#555;">${inv.client.addr}</div>`:''}
+      </div>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:16px;">
+        <thead><tr style="border-bottom:2px solid #111;">
+          <th style="padding:8px 4px;text-align:left;font-size:10px;color:#111;font-weight:700;letter-spacing:1px;text-transform:uppercase;">Désignation</th>
+          <th style="padding:8px 4px;text-align:center;font-size:10px;color:#111;font-weight:700;letter-spacing:1px;text-transform:uppercase;">Qté</th>
+          <th style="padding:8px 4px;text-align:right;font-size:10px;color:#111;font-weight:700;letter-spacing:1px;text-transform:uppercase;">P.U.</th>
+          <th style="padding:8px 4px;text-align:right;font-size:10px;color:#111;font-weight:700;letter-spacing:1px;text-transform:uppercase;">Total</th>
+        </tr></thead>
+        <tbody>${prodRows(inv,'padding:7px 4px;font-size:12px;color:#333;border-bottom:1px solid #e5e5e5;')}</tbody>
+      </table>
+      <div style="margin-left:auto;max-width:200px;">
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:#555;padding:3px 0;"><span>Sous-total</span><span>${formatF(inv.subtotal)}</span></div>
+        ${inv.tvaRate>0?`<div style="display:flex;justify-content:space-between;font-size:12px;color:#555;padding:3px 0;"><span>TVA (${inv.tvaRate}%)</span><span>${formatF(inv.tva)}</span></div>`:''}
+        <div style="display:flex;justify-content:space-between;border:2px solid #111;padding:10px;border-radius:4px;margin-top:8px;">
+          <span style="font-size:13px;font-weight:900;color:#111;">TOTAL</span>
+          <span style="font-size:15px;font-weight:900;color:#111;">${formatF(inv.total)}</span>
+        </div>
+      </div>
+      ${inv.notes?`<div style="margin-top:16px;padding:10px;border:1px solid #e5e5e5;border-radius:4px;font-size:11px;color:#555;font-style:italic;">${inv.notes}</div>`:''}
+      ${inv.sign?`<div style="margin-top:24px;"><div style="width:140px;height:1px;background:#111;margin-top:40px;"></div><div style="font-size:11px;color:#555;margin-top:4px;">${inv.sign}</div></div>`:''}
+      ${footerBlocks(inv)}${thankYou(inv,'#111')}
+    </div>`;
+  }
+
+  // ===== TEMPLATE 5 : Émeraude =====
+  function tpl5(inv) {
+    const sc = statusColor(inv.status);
+    return `<div style="background:#fff;font-family:'DM Sans',sans-serif;padding:20px;border-radius:12px;border:1px solid #d1fae5;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:14px;border-bottom:2px solid #d1fae5;margin-bottom:14px;">
+        <div>
+          ${inv.biz.logo?`<img src="${inv.biz.logo}" style="max-height:65px;max-width:130px;object-fit:contain;display:block;margin-bottom:5px;"/>`:''}
+          <div style="font-family:'Playfair Display',serif;font-size:${inv.biz.logo?'15':'22'}px;font-weight:800;color:#065f46;">${inv.biz.name}</div>
+          ${inv.biz.slogan?`<div style="font-size:10px;color:#888;margin-top:2px;">${inv.biz.slogan}</div>`:''}
+          ${inv.biz.phone?`<div style="font-size:10px;color:#555;margin-top:5px;">📞 ${inv.biz.phone}</div>`:''}
+          ${inv.biz.addr?`<div style="font-size:10px;color:#555;">📍 ${inv.biz.addr}</div>`:''}
+          ${inv.biz.email?`<div style="font-size:10px;color:#555;">✉️ ${inv.biz.email}</div>`:''}
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:22px;font-weight:900;color:#065f46;letter-spacing:2px;">FACTURE</div>
+          <div style="font-size:14px;font-weight:700;color:#059669;">${inv.num}</div>
+          <div style="font-size:11px;color:#666;margin-top:3px;">${fDate(inv.date)}</div>
+          <div style="margin-top:6px;background:${sc};color:#fff;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;display:inline-block;">${inv.status}</div>
+        </div>
+      </div>
+      <div style="margin-bottom:14px;padding:10px 12px;background:#f0fdf4;border-radius:8px;border-left:3px solid #059669;">
+        <div style="font-size:9px;font-weight:700;color:#059669;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;">Facturé à</div>
+        <div style="font-size:14px;font-weight:700;color:#065f46;">${inv.client.name}</div>
+        ${inv.client.phone?`<div style="font-size:11px;color:#555;margin-top:2px;">📞 ${inv.client.phone}</div>`:''}
+        ${inv.client.addr?`<div style="font-size:11px;color:#555;">📍 ${inv.client.addr}</div>`:''}
+      </div>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:14px;">
+        <thead><tr style="background:linear-gradient(90deg,#059669,#34d399);">
+          <th style="padding:8px;text-align:left;font-size:10px;color:#fff;font-weight:700;">Désignation</th>
+          <th style="padding:8px;text-align:center;font-size:10px;color:#fff;font-weight:700;">Qté</th>
+          <th style="padding:8px;text-align:right;font-size:10px;color:#fff;font-weight:700;">P.U.</th>
+          <th style="padding:8px;text-align:right;font-size:10px;color:#fff;font-weight:700;">Total</th>
+        </tr></thead>
+        <tbody>${prodRows(inv,'padding:7px 8px;font-size:12px;border-bottom:1px solid #f0fdf4;')}</tbody>
+      </table>
+      <div style="margin-left:auto;max-width:220px;">
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:#555;padding:4px 0;"><span>Sous-total</span><span>${formatF(inv.subtotal)}</span></div>
+        ${inv.tvaRate>0?`<div style="display:flex;justify-content:space-between;font-size:12px;color:#555;padding:4px 0;"><span>TVA (${inv.tvaRate}%)</span><span>${formatF(inv.tva)}</span></div>`:''}
+        <div style="display:flex;justify-content:space-between;background:linear-gradient(90deg,#059669,#34d399);padding:10px 12px;border-radius:8px;margin-top:6px;">
+          <span style="font-size:13px;font-weight:800;color:#fff;">TOTAL</span>
+          <span style="font-size:16px;font-weight:900;color:#fff;">${formatF(inv.total)}</span>
+        </div>
+      </div>
+      ${inv.notes?`<div style="margin-top:14px;padding:10px;background:#f0fdf4;border-radius:6px;font-size:11px;color:#555;font-style:italic;">${inv.notes}</div>`:''}
+      ${inv.sign?`<div style="margin-top:20px;"><div style="width:140px;height:1px;background:#ccc;margin-top:35px;"></div><div style="font-size:11px;color:#888;margin-top:4px;">${inv.sign}</div></div>`:''}
+      ${footerBlocks(inv)}${thankYou(inv,'#059669')}
+    </div>`;
+  }
+
+  // ===== TEMPLATE 6 : Bordeaux Luxe =====
+  function tpl6(inv) {
+    const sc = statusColor(inv.status);
+    return `<div style="background:#fff;font-family:'DM Sans',sans-serif;border-radius:12px;overflow:hidden;border:1px solid #fecaca;">
+      <div style="background:#7f1d1d;padding:18px 20px;display:flex;justify-content:space-between;align-items:center;">
+        <div>
+          ${inv.biz.logo?`<img src="${inv.biz.logo}" style="max-height:55px;max-width:110px;object-fit:contain;display:block;margin-bottom:4px;background:#fff;border-radius:6px;padding:3px;"/>`:''}
+          <div style="font-size:${inv.biz.logo?'14':'20'}px;font-weight:800;color:#fef2f2;">${inv.biz.name}</div>
+          ${inv.biz.slogan?`<div style="font-size:10px;color:rgba(254,226,226,.7);margin-top:1px;">${inv.biz.slogan}</div>`:''}
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:20px;font-weight:900;color:#fca5a5;letter-spacing:2px;">FACTURE</div>
+          <div style="font-size:12px;font-weight:700;color:#fef2f2;">${inv.num}</div>
+          <div style="font-size:10px;color:rgba(254,242,242,.7);margin-top:2px;">${fDate(inv.date)}</div>
+        </div>
+      </div>
+      <div style="padding:16px 20px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px;align-items:flex-start;">
+          <div>
+            <div style="font-size:9px;font-weight:700;color:#7f1d1d;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px;">Coordonnées</div>
+            ${inv.biz.phone?`<div style="font-size:10px;color:#555;">📞 ${inv.biz.phone}</div>`:''}
+            ${inv.biz.addr?`<div style="font-size:10px;color:#555;">📍 ${inv.biz.addr}</div>`:''}
+            ${inv.biz.email?`<div style="font-size:10px;color:#555;">✉️ ${inv.biz.email}</div>`:''}
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:9px;font-weight:700;color:#7f1d1d;letter-spacing:1px;text-transform:uppercase;margin-bottom:3px;">Facturé à</div>
+            <div style="font-size:14px;font-weight:700;color:#7f1d1d;">${inv.client.name}</div>
+            ${inv.client.phone?`<div style="font-size:10px;color:#555;">📞 ${inv.client.phone}</div>`:''}
+            ${inv.client.addr?`<div style="font-size:10px;color:#555;">📍 ${inv.client.addr}</div>`:''}
+            <div style="margin-top:5px;background:${sc};color:#fff;font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;display:inline-block;">${inv.status}</div>
+          </div>
+        </div>
+        <table style="width:100%;border-collapse:collapse;margin-bottom:14px;">
+          <thead><tr style="background:#7f1d1d;">
+            <th style="padding:8px;text-align:left;font-size:10px;color:#fca5a5;font-weight:700;">Désignation</th>
+            <th style="padding:8px;text-align:center;font-size:10px;color:#fca5a5;font-weight:700;">Qté</th>
+            <th style="padding:8px;text-align:right;font-size:10px;color:#fca5a5;font-weight:700;">P.U.</th>
+            <th style="padding:8px;text-align:right;font-size:10px;color:#fca5a5;font-weight:700;">Total</th>
+          </tr></thead>
+          <tbody>${prodRows(inv,'padding:7px 8px;font-size:12px;color:#333;border-bottom:1px solid #fef2f2;')}</tbody>
+        </table>
+        <div style="margin-left:auto;max-width:220px;">
+          <div style="display:flex;justify-content:space-between;font-size:12px;color:#555;padding:4px 0;"><span>Sous-total</span><span>${formatF(inv.subtotal)}</span></div>
+          ${inv.tvaRate>0?`<div style="display:flex;justify-content:space-between;font-size:12px;color:#555;padding:4px 0;"><span>TVA (${inv.tvaRate}%)</span><span>${formatF(inv.tva)}</span></div>`:''}
+          <div style="display:flex;justify-content:space-between;background:#7f1d1d;padding:10px 12px;border-radius:8px;margin-top:6px;">
+            <span style="font-size:13px;font-weight:800;color:#fca5a5;">TOTAL</span>
+            <span style="font-size:16px;font-weight:900;color:#fef2f2;">${formatF(inv.total)}</span>
+          </div>
+        </div>
+        ${inv.notes?`<div style="margin-top:14px;padding:10px;background:#fef2f2;border-radius:6px;font-size:11px;color:#555;font-style:italic;">${inv.notes}</div>`:''}
+        ${inv.sign?`<div style="margin-top:20px;"><div style="width:140px;height:1px;background:#ccc;margin-top:35px;"></div><div style="font-size:11px;color:#888;margin-top:4px;">${inv.sign}</div></div>`:''}
+        ${footerBlocks(inv)}${thankYou(inv,'#7f1d1d')}
+      </div>
+    </div>`;
+  }
+
+  // ===== SHARE AS IMAGE =====
+  async function shareAsImage() {
+    if (!currentInvoice) return;
+    const btn = event.target;
+    btn.textContent = '⏳ Préparation HD...';
+    btn.disabled = true;
+    try {
+      const element = document.getElementById('previewArea');
+
+      // Forcer une largeur fixe pour un rendu net
+      const originalWidth = element.style.width;
+      element.style.width = '800px';
+
+      const canvas = await html2canvas(element, {
+        scale: 4,                    // ×4 = image très haute résolution
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        imageTimeout: 0,             // pas de timeout pour le logo
+        allowTaint: false,
+        width: element.offsetWidth,
+        windowWidth: 800,
+      });
+
+      element.style.width = originalWidth;
+
+      // Exporter en JPEG haute qualité (meilleure compression que PNG pour WhatsApp HD)
+      canvas.toBlob(async (blob) => {
+        const fileName = 'facture-' + (currentInvoice.num || 'BG') + '.jpg';
+        const file = new File([blob], fileName, { type: 'image/jpeg' });
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: 'Facture ' + currentInvoice.num,
+          });
+        } else {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = fileName;
+          a.click();
+          URL.revokeObjectURL(url);
+          alert('📥 Image HD téléchargée ! Envoie-la sur WhatsApp.');
+        }
+        btn.textContent = '📲 Envoyer comme image sur WhatsApp';
+        btn.disabled = false;
+      }, 'image/jpeg', 1.0);   // qualité 1.0 = maximum
+
+    } catch (err) {
+      btn.textContent = '📲 Envoyer comme image sur WhatsApp';
+      btn.disabled = false;
+      alert('Erreur : ' + err.message);
+    }
+  }
+
+  // ===== WHATSAPP TEXT =====
+  function shareWhatsApp() {
+    if (!currentInvoice) return;
+    const inv = currentInvoice;
+    let msg = `🧾 *FACTURE ${inv.num}*\n`;
+    msg += `📅 Date: ${inv.date}\n`;
+    msg += `👤 Client: ${inv.client.name}\n`;
+    if (inv.client.phone) msg += `📞 Tél: ${inv.client.phone}\n`;
+    msg += `\n*PRODUITS:*\n`;
+    inv.products.forEach(p => {
+      msg += `▪️ ${p.name} x${p.qty} = ${formatF(p.qty * p.price)}\n`;
+    });
+    if (inv.tvaRate > 0) msg += `\n💼 Sous-total: ${formatF(inv.subtotal)}\n`;
+    if (inv.tvaRate > 0) msg += `📊 TVA (${inv.tvaRate}%): ${formatF(inv.tva)}\n`;
+    msg += `\n💰 *TOTAL: ${formatF(inv.total)}*\n`;
+    msg += `\n✅ Statut: ${inv.status}`;
+    if (inv.notes) msg += `\n\n📝 ${inv.notes}`;
+    msg += `\n\n_${inv.biz.name}_`;
+
+    const url = 'https://wa.me/?text=' + encodeURIComponent(msg);
+    window.open(url, '_blank');
+  }
+
+  // ===== PRINT =====
+  function printInvoice() {
+    window.print();
+  }
+
+  // ===== HISTORY =====
+  function saveToHistory() {
+    if (!currentInvoice) {
+      showToast('⚠️ Génère d\'abord la facture avant de la sauvegarder.', 'error');
+      return;
+    }
+    try {
+      const exists = invHistory.findIndex(h => h.num === currentInvoice.num);
+      if (exists >= 0) invHistory[exists] = currentInvoice;
+      else invHistory.unshift(currentInvoice);
+      const ok = safeSet('bg_facture_history', JSON.stringify(invHistory));
+      if (!ok) {
+        if (exists < 0) invHistory.shift();
+        return;
+      }
+      // Sync Firebase si connecté
+      if (currentUser && fbDb) {
+        syncToFirebase(currentInvoice).then(synced => {
+          if (synced) showToast('✅ Facture ' + currentInvoice.num + ' sauvegardée & synchronisée !', 'success');
+          else showToast('✅ Facture ' + currentInvoice.num + ' sauvegardée localement.', 'success');
+        });
+      } else {
+        showToast('✅ Facture ' + currentInvoice.num + ' sauvegardée (hors ligne).', 'success');
+      }
+      renderHistory();
+    } catch (e) {
+      console.error('saveToHistory error:', e);
+      showToast('❌ Erreur inattendue : ' + e.message, 'error');
+    }
+  }
+
+  function renderHistory() {
+    const container = document.getElementById('historyList');
+    const empty = document.getElementById('historyEmpty');
+    const statsBar = document.getElementById('histStatsBar');
+
+    // Appliquer le filtre équipe si patron
+    let displayList = invHistory;
+    if (isPatron && teamFilterUid !== 'all') {
+      displayList = invHistory.filter(inv => inv.userId === teamFilterUid);
+    }
+
+    if (displayList.length === 0) {
+      empty.style.display = 'block';
+      container.innerHTML = '';
+      statsBar.style.display = 'none';
+      return;
+    }
+    empty.style.display = 'none';
+    statsBar.style.display = 'flex';
+
+    const totalRevenue = displayList.reduce((acc, inv) => acc + (inv.total || 0), 0);
+    const totalProfit = displayList.reduce((acc, inv) => acc + (inv.profit || 0), 0);
+    document.getElementById('statCount').textContent = displayList.length;
+    document.getElementById('statRevenue').textContent = formatF(totalRevenue);
+    document.getElementById('statProfit').textContent = formatF(totalProfit);
+
+    container.innerHTML = displayList.map((inv, i) => {
+      const userBadge = isPatron && inv.userName
+        ? `<span class="hist-user-badge">👤 ${inv.userName}</span>`
+        : '';
+      return `
+        <div class="history-item" onclick="loadInvoice(${invHistory.indexOf(inv)})">
+          <div class="history-item-top">
+            <div class="history-client">${inv.client.name}</div>
+            <div class="history-amount">${formatF(inv.total)}</div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px;">
+            <div class="history-num">${inv.num}</div>
+            <div class="history-date">${inv.date}</div>
+          </div>
+          ${userBadge}
+          ${inv.profit !== null && inv.profit !== undefined && inv.profit > 0 ? `<div class="profit-line">💰 Bénéfice : +${formatF(inv.profit)}</div>` : ''}
+        </div>
+      `;
+    }).join('');
+  }
+
+  function loadInvoice(i) {
+    currentInvoice = history[i];
+    renderPreview(currentInvoice);
+    showTab('preview');
+  }
+
+  function selGarantie(el, val) {
+    document.querySelectorAll('#chips-garantie .chip-g').forEach(function(c){ c.classList.remove('active'); });
+    el.classList.add('active');
+    document.getElementById('invGarantie').value = val;
+  }
+  function uploadLogo(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const b64 = e.target.result;
+      settings.logoBase64 = b64;
+      localStorage.setItem('bg_facture_settings', JSON.stringify(settings));
+      document.getElementById('logoPreviewImg').src = b64;
+      document.getElementById('logoPreviewWrap').style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function deleteLogo() {
+    settings.logoBase64 = '';
+    localStorage.setItem('bg_facture_settings', JSON.stringify(settings));
+    document.getElementById('logoPreviewImg').src = '';
+    document.getElementById('logoPreviewWrap').style.display = 'none';
+    document.getElementById('logoFileInput').value = '';
+  }
+
+  // ===== SETTINGS =====
+  function saveSettings() {
+    settings = {
+      bizName: document.getElementById('bizName').value,
+      bizPhone: document.getElementById('bizPhone').value,
+      bizAddr: document.getElementById('bizAddr').value,
+      bizEmail: document.getElementById('bizEmail').value,
+      bizSlogan: document.getElementById('bizSlogan').value,
+      invPrefix: document.getElementById('invPrefix').value,
+      bizThanks: document.getElementById('bizThanks').value,
+      bizGarantie: document.getElementById('bizGarantie').value,
+      bizRemboursement: document.getElementById('bizRemboursement').value,
+      logoBase64: settings.logoBase64 || '',
+    };
+    localStorage.setItem('bg_facture_settings', JSON.stringify(settings));
+    document.getElementById('settingsSaved').style.display = 'block';
+    setTimeout(() => document.getElementById('settingsSaved').style.display = 'none', 2000);
+  }
+
+  // ===== PWA ICON & MANIFEST =====
+  function generateIcon(size) {
+    const canvas = document.createElement('canvas');
+    canvas.width = size; canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    const grad = ctx.createLinearGradient(0, 0, size, size);
+    grad.addColorStop(0, '#1a1a2e'); grad.addColorStop(1, '#0d0d1a');
+    ctx.fillStyle = grad;
+    const r = size * 0.22;
+    ctx.beginPath();
+    ctx.moveTo(r,0); ctx.lineTo(size-r,0); ctx.quadraticCurveTo(size,0,size,r);
+    ctx.lineTo(size,size-r); ctx.quadraticCurveTo(size,size,size-r,size);
+    ctx.lineTo(r,size); ctx.quadraticCurveTo(0,size,0,size-r);
+    ctx.lineTo(0,r); ctx.quadraticCurveTo(0,0,r,0);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = '#c9a84c'; ctx.lineWidth = size*0.04; ctx.stroke();
+    ctx.fillStyle = '#c9a84c';
+    ctx.font = 'bold ' + (size*0.28) + 'px serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('BG', size/2, size*0.38);
+    ctx.fillStyle = '#f0d080';
+    ctx.font = 'bold ' + (size*0.11) + 'px sans-serif';
+    ctx.fillText('FACTURE', size/2, size*0.62);
+    ctx.strokeStyle = 'rgba(201,168,76,0.5)'; ctx.lineWidth = size*0.025;
+    const lx=size*0.3, lw=size*0.4, ly=size*0.76;
+    ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(lx+lw,ly); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(lx,ly+size*0.08); ctx.lineTo(lx+lw*0.65,ly+size*0.08); ctx.stroke();
+    return canvas.toDataURL('image/png');
+  }
+
+  function setupPWA() {
+    const icon192 = generateIcon(192);
+    const icon512 = generateIcon(512);
+
+    // Apple touch icon
+    const appleLink = document.createElement('link');
+    appleLink.rel = 'apple-touch-icon'; appleLink.href = icon192;
+    document.head.appendChild(appleLink);
+
+    // Manifest en data: URI — fonctionne EN LOCAL et sur GitHub
+    const manifest = {
+      name: 'BG Facture',
+      short_name: 'BG Facture',
+      description: 'Générateur de factures professionnel BG Market',
+      start_url: './',
+      display: 'standalone',
+      background_color: '#0d0d1a',
+      theme_color: '#c9a84c',
+      orientation: 'portrait',
+      icons: [
+        { src: icon192, sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
+        { src: icon512, sizes: '512x512', type: 'image/png', purpose: 'any maskable' }
+      ]
+    };
+
+    // ✅ data: URI au lieu de Blob — compatible fichier local
+    const manifestData = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(manifest));
+    const manifestLink = document.createElement('link');
+    manifestLink.rel = 'manifest'; manifestLink.href = manifestData;
+    document.head.appendChild(manifestLink);
+  }
+  setupPWA();
+
+  // ===== PRINT STYLES =====
+  const printStyle = document.createElement('style');
+  printStyle.textContent = `
+    @media print {
+      body > *:not(#tab-preview) { display: none !important; }
+      #tab-preview { display: block !important; padding: 0; }
+      .btn { display: none !important; }
+      #previewArea { border-radius: 0; padding: 0; }
+    }
+  `;
+  document.head.appendChild(printStyle);
+
+  init();
+</script>
+</body>
+</html>
